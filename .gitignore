@@ -1,0 +1,5 @@
+.env
+venv/
+boto-sign-in.py
+
+__pycache__/
