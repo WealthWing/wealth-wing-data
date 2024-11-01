@@ -1,4 +1,4 @@
-## Solvo
+## WelthWing
 
 ## Initialize venv
 
