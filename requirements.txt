@@ -1,0 +1,10 @@
+fastapi~=0.110.1
+uvicorn[standard]~=0.29.0
+sqlalchemy~=2.0.29
+aiosqlite~=0.20.0
+pydantic~=2.7.0
+alembic~=1.13.1
+psycopg2-binary~=2.9.9
+boto3==1.34.131
+PyJWT[crypto]==2.8.0
+pycognito==2024.2.0
