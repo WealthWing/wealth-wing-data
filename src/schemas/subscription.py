@@ -68,3 +68,12 @@ class SubscriptionInDBBase(SubscriptionBase):
 
 class SubscriptionResponse(SubscriptionInDBBase):
     pass        
+
+class SubscriptionsAllResponse(BaseModel):
+    uuid: UUID
+    name: str
+    cost: Optional[Decimal] = None
+    class Config:
+        from_orm = True    
+    
+ 

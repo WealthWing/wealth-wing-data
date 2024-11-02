@@ -1,18 +1,20 @@
 from fastapi import APIRouter, HTTPException, Depends
-from requests import Session
 from src.schemas.subscription import (
     SubscriptionCreate,
     SubscriptionUpdate,
     SubscriptionResponse,
+    SubscriptionsAllResponse,
 )
 from src.model.models import Subscription
 from src.util.user import get_current_user
-from src.model.models import User
 from src.util.types import UserPool
 from src.database.connect import service
 from typing import List
 
+
 subscription_router = APIRouter()
+
+""" Create a new subscription """
 
 
 @subscription_router.post(
@@ -23,8 +25,6 @@ async def create_subscription(
     db: service,
     current_user: UserPool = Depends(get_current_user),
 ):
-    if current_user is None:
-        raise HTTPException(status_code=401, detail="Unauthorized")
 
     subscription_dict = subscription_data.model_dump(exclude_unset=False)
     subscription_dict["user_id"] = current_user.sub
@@ -41,6 +41,9 @@ async def create_subscription(
     return subscription
 
 
+""" Update a subscription """
+
+
 @subscription_router.put(
     "/update/{subscription_id}", status_code=201, response_model=SubscriptionResponse
 )
@@ -50,8 +53,6 @@ async def update_subscription(
     db: service,
     current_user: UserPool = Depends(get_current_user),
 ):
-    if current_user is None:
-        raise HTTPException(status_code=401, detail="Unauthorized")
 
     subscription_model = (
         db.query(Subscription)
@@ -65,13 +66,13 @@ async def update_subscription(
 
     try:
         # remove unused fields exclude_unset=True
-        subscription_dict = subscription_data.model_dump(exclude_unset=True)        
-        
+        subscription_dict = subscription_data.model_dump(exclude_unset=True)
+
         for key, value in subscription_dict.items():
             if getattr(subscription_model, key) != value:
                 setattr(subscription_model, key, value)
-                
-        db.add(subscription_model)                    
+
+        db.add(subscription_model)
         db.commit()
         db.refresh(subscription_model)
         return subscription_model
@@ -80,14 +81,76 @@ async def update_subscription(
         raise HTTPException(status_code=500, detail=f"Failed to create store: {e}")
 
 
+""" Get all subscriptions """
+
+
 @subscription_router.get(
-    "/subscriptions", status_code=201, response_model=List[SubscriptionResponse]
+    "/summary", status_code=201, response_model=List[SubscriptionsAllResponse]
 )
 async def get_user_subscriptions(
     db: service,
     current_user: UserPool = Depends(get_current_user),
 ):
+
     subscriptions = (
-        db.query(Subscription).filter(Subscription.user_id == current_user.sub).all()
+        db.query(Subscription.uuid, Subscription.name, Subscription.cost)
+        .filter(Subscription.user_id == current_user.sub)
+        .all()
     )
+
     return subscriptions
+
+
+""" Get a single subscription """
+
+
+@subscription_router.get(
+    "/detail/{subscription_id}", status_code=201, response_model=SubscriptionResponse
+)
+async def get_subscription(
+    subscription_id: str,
+    db: service,
+    current_user: UserPool = Depends(get_current_user),
+):
+
+    subscription = (
+        db.query(Subscription)
+        .filter(Subscription.uuid == subscription_id)
+        .filter(Subscription.user_id == current_user.sub)
+        .first()
+    )
+
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    return subscription
+
+
+@subscription_router.delete("/delete/{subscription_id}", status_code=204)
+async def delete_subscription(
+    subscription_id: str,
+    db: service,
+    current_user: UserPool = Depends(get_current_user),
+):
+
+    subscription = (
+        db.query(Subscription)
+        .filter(Subscription.uuid == subscription_id)
+        .filter(Subscription.user_id == current_user.sub)
+        .first()
+    )
+
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    try:
+               
+        db.delete(subscription)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete subscription: {e}"
+        )
+
+    return "Subscription deleted successfully"
