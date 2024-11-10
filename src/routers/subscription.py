@@ -10,12 +10,11 @@ from src.util.user import get_current_user
 from src.util.types import UserPool
 from src.database.connect import service
 from typing import List
-
+from sqlalchemy.orm import joinedload
 
 subscription_router = APIRouter()
 
 """ Create a new subscription """
-
 
 @subscription_router.post(
     "/create", status_code=201, response_model=SubscriptionResponse
@@ -112,9 +111,9 @@ async def get_subscription(
     db: service,
     current_user: UserPool = Depends(get_current_user),
 ):
-
+    # load join table joinedload(Subscription.user)
     subscription = (
-        db.query(Subscription)
+        db.query(Subscription).options(joinedload(Subscription.user))
         .filter(Subscription.uuid == subscription_id)
         .filter(Subscription.user_id == current_user.sub)
         .first()

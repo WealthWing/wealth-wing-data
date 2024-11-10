@@ -9,12 +9,13 @@ deactivate (deactivate venv)
 
 ## install dependencies
 - pip install -r requirements.txt
+- --force-reinstall
 
 ***PSQL***
 - for psql `psycopg2-binary` is required
 
 ***server start***
-uvicorn main:app --reload
+`uvicorn main:app --reload`
 
 ***ALEMBIC***
 
