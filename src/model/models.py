@@ -1,12 +1,12 @@
+from typing import Optional
 from src.database.connect import Base
 from sqlalchemy import  Column, DateTime, Integer, String, Enum, Float, ForeignKey, Numeric, Boolean, Text
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 import enum
-import datetime
+from datetime import datetime, timezone
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
-
 
 class UserRole(enum.Enum):
     Admin = "Admin"
@@ -47,8 +47,17 @@ class Subscription(Base):
     status = Column(String(50))
     payment_method = Column(String(50))
     notes = Column(Text)
-    created_at = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
-    updated_at = Column(DateTime, default=datetime.datetime.now(datetime.UTC), onupdate=datetime.datetime.now(datetime.UTC))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+        nullable=False
+    )
     cancellation_date = Column(DateTime)
     trial_period = Column(Boolean, default=False)
     trial_end_date = Column(DateTime)
@@ -67,6 +76,80 @@ class TestTable(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    role = Column(Enum(UserRole, name='userrole'), nullable=False)    
+    role = Column(Enum(UserRole, name='userrole'), nullable=False)
+    
+    
+class CategoryTypeEnum(Enum):
+    SUBSCRIPTIONS = 'Subscriptions and Memberships' # recurring expenses that may be monthly or annual
+    VARIABLE_EXPENSES = 'Variable Expenses' #expenses that fluctuate month to month
+    SAVINGS_INVESTMENTS = 'Savings and Investments'
+    DEBT_PAYEMENTS = 'Debt Payments'
+    FIXED_EXPENSES = 'Fixed Expenses' #expenses that remain the same month to month
+    DISCRETIONARY_EXPENSES = 'Discretionary Expenses' #expenses that are not necessary for survival   
+    MISC = 'Miscellaneous' #expenses that do not fit into any other category 
+        
+class Categories(Base):
+    __tablename__ = 'categories'
+
+    uuid: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    type: Mapped['CategoryTypeEnum'] = mapped_column(
+        Enum('CategoryTypeEnum', name='category_type'),
+        nullable=False
+    )
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+        nullable=False
+    )
+
+    def __repr__(self):
+        return f"<Categories(uuid={self.uuid}, name='{self.name}', type='{self.type}')>" 
+    
+#class Expenses(Base):
+#    __tablename__ = 'expenses'
+#    
+#    uuid: Mapped[UUID] = mapped_column(
+#        UUID(as_uuid=True),
+#        primary_key=True,
+#        default=uuid.uuid4,
+#        index=True
+#    )
+#    user_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('user_table.uuid'), nullable=False)
+#    #category_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('categories.uuid'), nullable=False)
+#    subscription_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('subscriptions.uuid'), nullable=False)
+#    amount: Mapped[Numeric] = mapped_column(Numeric(10, 2), nullable=False)
+#    currency: Mapped[str] = mapped_column(String(10), default='USD')
+#    date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+#    created_at: Mapped[datetime] = mapped_column(
+#        DateTime(timezone=True),
+#        default=datetime.now(timezone.utc),
+#        nullable=False
+#    )
+#    updated_at: Mapped[datetime] = mapped_column(
+#        DateTime(timezone=True),
+#        default=datetime.now(timezone.utc),
+#        onupdate=datetime.now(timezone.utc),
+#        nullable=False
+#    )
+#    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+#    
+#    subscription = relationship('Subscription', back_populates='user')
+    
+    
+  
+          
     
     

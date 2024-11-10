@@ -4,6 +4,8 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
+from src.schemas.user import UserResponse
+
 class SubscriptionBase(BaseModel):
     user_id: UUID = None
     name: str
@@ -67,7 +69,7 @@ class SubscriptionInDBBase(SubscriptionBase):
         from_attributes = True
 
 class SubscriptionResponse(SubscriptionInDBBase):
-    pass        
+    user: UserResponse     
 
 class SubscriptionsAllResponse(BaseModel):
     uuid: UUID
