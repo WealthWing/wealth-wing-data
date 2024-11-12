@@ -4,7 +4,8 @@ from pydantic import BaseModel
 from src.model.models import CategoryTypeEnum
 
 class CategoryBase(BaseModel):
-    type: str
+    title: str
+    type: CategoryTypeEnum
     description: str
 
 class CategoryCreate(CategoryBase):

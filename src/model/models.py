@@ -101,6 +101,7 @@ class Category(Base):
         default=uuid.uuid4,
         index=True
     )
+    title: Mapped[str] = mapped_column(String, nullable=False)
     # Use PgEnum and reference the Python Enum `CategoryTypeEnum`
     type: Mapped[CategoryTypeEnum] = mapped_column(
         PgEnum(CategoryTypeEnum, name="category_type", create_type=False),
