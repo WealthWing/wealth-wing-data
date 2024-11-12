@@ -7,6 +7,7 @@ import enum
 from datetime import datetime, timezone
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 
 class UserRole(enum.Enum):
     Admin = "Admin"
@@ -36,6 +37,7 @@ class Subscription(Base):
     
     uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey('user_table.uuid'), nullable=False)
+    category_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('categories.uuid'), nullable=True)
     name = Column(String(255), nullable=False)
     cost = Column(Numeric(10, 2))
     currency = Column(String(10), default='USD')
@@ -69,6 +71,8 @@ class Subscription(Base):
     website_url = Column(String(255))
     
     user = relationship("User", back_populates="subscriptions")
+    category = relationship('Category', back_populates='subscriptions')
+
         
 
 class TestTable(Base):
@@ -79,16 +83,16 @@ class TestTable(Base):
     role = Column(Enum(UserRole, name='userrole'), nullable=False)
     
     
-class CategoryTypeEnum(Enum):
-    SUBSCRIPTIONS = 'Subscriptions and Memberships' # recurring expenses that may be monthly or annual
-    VARIABLE_EXPENSES = 'Variable Expenses' #expenses that fluctuate month to month
-    SAVINGS_INVESTMENTS = 'Savings and Investments'
-    DEBT_PAYEMENTS = 'Debt Payments'
-    FIXED_EXPENSES = 'Fixed Expenses' #expenses that remain the same month to month
-    DISCRETIONARY_EXPENSES = 'Discretionary Expenses' #expenses that are not necessary for survival   
-    MISC = 'Miscellaneous' #expenses that do not fit into any other category 
+class CategoryTypeEnum(enum.Enum):
+    SUBSCRIPTIONS_AND_MEMBERSHIPS = "SUBSCRIPTIONS_AND_MEMBERSHIPS"
+    VARIABLE_EXPENSES = "VARIABLE_EXPENSES"
+    SAVINGS_AND_INVESTMENTS = "SAVINGS_AND_INVESTMENTS"
+    DEBT_PAYMENTS = "DEBT_PAYMENTS"
+    FIXED_EXPENSES = "FIXED_EXPENSES"
+    DISCRETIONARY_EXPENSES = "DISCRETIONARY_EXPENSES"
+    MISCELLANEOUS = "MISCELLANEOUS"
         
-class Categories(Base):
+class Category(Base):
     __tablename__ = 'categories'
 
     uuid: Mapped[UUID] = mapped_column(
@@ -97,9 +101,9 @@ class Categories(Base):
         default=uuid.uuid4,
         index=True
     )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    type: Mapped['CategoryTypeEnum'] = mapped_column(
-        Enum('CategoryTypeEnum', name='category_type'),
+    # Use PgEnum and reference the Python Enum `CategoryTypeEnum`
+    type: Mapped[CategoryTypeEnum] = mapped_column(
+        PgEnum(CategoryTypeEnum, name="category_type", create_type=False),
         nullable=False
     )
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -115,8 +119,9 @@ class Categories(Base):
         nullable=False
     )
 
-    def __repr__(self):
-        return f"<Categories(uuid={self.uuid}, name='{self.name}', type='{self.type}')>" 
+    subscriptions = relationship('Subscription', back_populates='category')
+
+
     
 #class Expenses(Base):
 #    __tablename__ = 'expenses'

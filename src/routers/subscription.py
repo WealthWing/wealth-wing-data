@@ -8,7 +8,7 @@ from src.schemas.subscription import (
 from src.model.models import Subscription
 from src.util.user import get_current_user
 from src.util.types import UserPool
-from src.database.connect import service
+from src.database.connect import db_session
 from typing import List
 from sqlalchemy.orm import joinedload
 
@@ -21,7 +21,7 @@ subscription_router = APIRouter()
 )
 async def create_subscription(
     subscription_data: SubscriptionCreate,
-    db: service,
+    db: db_session,
     current_user: UserPool = Depends(get_current_user),
 ):
 
@@ -49,7 +49,7 @@ async def create_subscription(
 async def update_subscription(
     subscription_data: SubscriptionUpdate,
     subscription_id: str,
-    db: service,
+    db: db_session,
     current_user: UserPool = Depends(get_current_user),
 ):
 
@@ -87,7 +87,7 @@ async def update_subscription(
     "/summary", status_code=201, response_model=List[SubscriptionsAllResponse]
 )
 async def get_user_subscriptions(
-    db: service,
+    db: db_session,
     current_user: UserPool = Depends(get_current_user),
 ):
 
@@ -108,7 +108,7 @@ async def get_user_subscriptions(
 )
 async def get_subscription(
     subscription_id: str,
-    db: service,
+    db: db_session,
     current_user: UserPool = Depends(get_current_user),
 ):
     # load join table joinedload(Subscription.user)
@@ -128,7 +128,7 @@ async def get_subscription(
 @subscription_router.delete("/delete/{subscription_id}", status_code=204)
 async def delete_subscription(
     subscription_id: str,
-    db: service,
+    db: db_session,
     current_user: UserPool = Depends(get_current_user),
 ):
 

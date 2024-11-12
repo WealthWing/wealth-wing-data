@@ -6,8 +6,8 @@ from src.middleware.auth import AuthMiddleware
 from src.routers import health_check
 from src.routers.subscription import subscription_router
 from src.routers.user import user_router
-from src.model.test_schemas import TestTableResponse
-from src.database.connect import service
+from src.routers.categories import category_router
+from src.database.connect import db_session
 from typing import List
 
 logging.basicConfig(level=logging.INFO)
@@ -19,6 +19,7 @@ app = FastAPI()
 app.include_router(health_check.router, prefix="/health", tags=["health"])
 app.include_router(subscription_router, prefix="/subscription", tags=["subscription"])
 app.include_router(user_router, prefix="/user", tags=["user"])
+app.include_router(category_router, prefix="/category", tags=["category"])
 
 app.add_middleware(AuthMiddleware)
 
@@ -29,6 +30,6 @@ app.add_middleware(AuthMiddleware)
 #     return tests
 
 @app.get("/users", response_model=List[UserResponse])
-def get_tests(db: service):
+def get_tests(db: db_session):
     tests = db.query(User).all()
     return tests
