@@ -92,7 +92,7 @@ async def get_user_subscriptions(
 ):
 
     subscriptions = (
-        db.query(Subscription.uuid, Subscription.name, Subscription.cost)
+        db.query(Subscription.uuid, Subscription.name, Subscription.amount)
         .filter(Subscription.user_id == current_user.sub)
         .all()
     )

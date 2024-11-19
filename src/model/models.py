@@ -6,7 +6,7 @@ from sqlalchemy import (
     Integer,
     String,
     Enum,
-    Float,
+    BigInteger,
     ForeignKey,
     Numeric,
     Boolean,
@@ -54,7 +54,7 @@ class Subscription(Base):
         UUID(as_uuid=True), ForeignKey("categories.uuid"), nullable=True
     )
     name = Column(String(255), nullable=False)
-    cost = Column(Numeric(10, 2))
+    amount: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
     currency = Column(String(10), default="USD")
     billing_frequency = Column(String(50))
     start_date = Column(DateTime)
@@ -143,7 +143,7 @@ class Expense(Base):
     category_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("categories.uuid"), nullable=False
     )
-    amount: Mapped[Numeric] = mapped_column(Numeric(10, 2), nullable=False)
+    amount: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="USD")
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(

@@ -9,7 +9,7 @@ from src.model.models import UserRole
 class SubscriptionsAllResponse(BaseModel):
     uuid: UUID
     name: str
-    cost: Optional[Decimal] = None
+    amount: int
     class Config:
         from_orm = True   
 

@@ -10,7 +10,7 @@ class SubscriptionBase(BaseModel):
     user_id: UUID = None
     category_id: Optional[UUID]
     name: str
-    cost: Optional[Decimal] = None
+    amount: int
     currency: Optional[str] = None
     billing_frequency: Optional[str] = None
     start_date: Optional[datetime] = None
@@ -37,11 +37,11 @@ class SubscriptionCreate(SubscriptionBase):
 
 class SubscriptionUpdate(BaseModel):
     name: Optional[str] = None
-    cost: Optional[Decimal] = None
     currency: Optional[str] = None
     billing_frequency: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    amount: int | None = None
     next_billing_date: Optional[datetime] = None
     auto_renew: Optional[bool] = None
     status: Optional[str] = None
@@ -75,7 +75,6 @@ class SubscriptionResponse(SubscriptionInDBBase):
 class SubscriptionsAllResponse(BaseModel):
     uuid: UUID
     name: str
-    cost: Optional[Decimal] = None
     class Config:
         from_orm = True    
     
