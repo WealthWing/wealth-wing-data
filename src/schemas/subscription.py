@@ -8,6 +8,7 @@ from src.schemas.user import UserResponse
 
 class SubscriptionBase(BaseModel):
     user_id: UUID = None
+    category_id: Optional[UUID]
     name: str
     cost: Optional[Decimal] = None
     currency: Optional[str] = None

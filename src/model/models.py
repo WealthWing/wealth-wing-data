@@ -1,6 +1,17 @@
 from typing import Optional
 from src.database.connect import Base
-from sqlalchemy import  Column, DateTime, Integer, String, Enum, Float, ForeignKey, Numeric, Boolean, Text
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Integer,
+    String,
+    Enum,
+    Float,
+    ForeignKey,
+    Numeric,
+    Boolean,
+    Text,
+)
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 import enum
@@ -8,6 +19,7 @@ from datetime import datetime, timezone
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
+
 
 class UserRole(enum.Enum):
     Admin = "Admin"
@@ -19,28 +31,31 @@ class UserRole(enum.Enum):
 
 
 class User(Base):
-    __tablename__ = 'user_table'
-    
+    __tablename__ = "user_table"
+
     uuid = Column(UUID(as_uuid=True), primary_key=True, index=True)
     email: str = Column(String, unique=True, nullable=False, index=True)
     name: str = Column(String)
     last_name: str = Column(String)
-    role: UserRole = Column(Enum(UserRole, name='user_role'), nullable=False)
+    role: UserRole = Column(Enum(UserRole, name="user_role"), nullable=False)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    
-    subscriptions = relationship('Subscription', back_populates='user')
-    
+
+    subscriptions = relationship("Subscription", back_populates="user")
+    expenses = relationship("Expense", back_populates="user")
+
 
 class Subscription(Base):
-    __tablename__ = 'subscriptions'
-    
+    __tablename__ = "subscriptions"
+
     uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('user_table.uuid'), nullable=False)
-    category_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('categories.uuid'), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("user_table.uuid"), nullable=False)
+    category_id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("categories.uuid"), nullable=True
+    )
     name = Column(String(255), nullable=False)
     cost = Column(Numeric(10, 2))
-    currency = Column(String(10), default='USD')
+    currency = Column(String(10), default="USD")
     billing_frequency = Column(String(50))
     start_date = Column(DateTime)
     end_date = Column(DateTime)
@@ -50,15 +65,13 @@ class Subscription(Base):
     payment_method = Column(String(50))
     notes = Column(Text)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=datetime.now(timezone.utc),
-        nullable=False
+        DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=datetime.now(timezone.utc),
         onupdate=datetime.now(timezone.utc),
-        nullable=False
+        nullable=False,
     )
     cancellation_date = Column(DateTime)
     trial_period = Column(Boolean, default=False)
@@ -69,20 +82,19 @@ class Subscription(Base):
     usage_limits = Column(String(255))
     support_contact = Column(String(255))
     website_url = Column(String(255))
-    
-    user = relationship("User", back_populates="subscriptions")
-    category = relationship('Category', back_populates='subscriptions')
 
-        
+    user = relationship("User", back_populates="subscriptions")
+    category = relationship("Category", back_populates="subscriptions")
+
 
 class TestTable(Base):
-    __tablename__ = 'test_table'
+    __tablename__ = "test_table"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    role = Column(Enum(UserRole, name='userrole'), nullable=False)
-    
-    
+    role = Column(Enum(UserRole, name="userrole"), nullable=False)
+
+
 class CategoryTypeEnum(enum.Enum):
     SUBSCRIPTIONS_AND_MEMBERSHIPS = "SUBSCRIPTIONS_AND_MEMBERSHIPS"
     VARIABLE_EXPENSES = "VARIABLE_EXPENSES"
@@ -91,71 +103,60 @@ class CategoryTypeEnum(enum.Enum):
     FIXED_EXPENSES = "FIXED_EXPENSES"
     DISCRETIONARY_EXPENSES = "DISCRETIONARY_EXPENSES"
     MISCELLANEOUS = "MISCELLANEOUS"
-        
+
+
 class Category(Base):
-    __tablename__ = 'categories'
+    __tablename__ = "categories"
 
     uuid: Mapped[UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-        index=True
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
     )
     title: Mapped[str] = mapped_column(String, nullable=False)
-    # Use PgEnum and reference the Python Enum `CategoryTypeEnum`
     type: Mapped[CategoryTypeEnum] = mapped_column(
         PgEnum(CategoryTypeEnum, name="category_type", create_type=False),
-        nullable=False
+        nullable=False,
     )
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=datetime.now(timezone.utc),
-        nullable=False
+        DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=datetime.now(timezone.utc),
         onupdate=datetime.now(timezone.utc),
-        nullable=False
+        nullable=False,
     )
 
-    subscriptions = relationship('Subscription', back_populates='category')
+    subscriptions = relationship("Subscription", back_populates="category")
+    expenses = relationship("Expense", back_populates="category")
 
 
-    
-#class Expenses(Base):
-#    __tablename__ = 'expenses'
-#    
-#    uuid: Mapped[UUID] = mapped_column(
-#        UUID(as_uuid=True),
-#        primary_key=True,
-#        default=uuid.uuid4,
-#        index=True
-#    )
-#    user_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('user_table.uuid'), nullable=False)
-#    #category_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('categories.uuid'), nullable=False)
-#    subscription_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey('subscriptions.uuid'), nullable=False)
-#    amount: Mapped[Numeric] = mapped_column(Numeric(10, 2), nullable=False)
-#    currency: Mapped[str] = mapped_column(String(10), default='USD')
-#    date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-#    created_at: Mapped[datetime] = mapped_column(
-#        DateTime(timezone=True),
-#        default=datetime.now(timezone.utc),
-#        nullable=False
-#    )
-#    updated_at: Mapped[datetime] = mapped_column(
-#        DateTime(timezone=True),
-#        default=datetime.now(timezone.utc),
-#        onupdate=datetime.now(timezone.utc),
-#        nullable=False
-#    )
-#    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-#    
-#    subscription = relationship('Subscription', back_populates='user')
-    
-    
-  
-          
-    
-    
+class Expense(Base):
+    __tablename__ = "expenses"
+
+    uuid: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("user_table.uuid"), nullable=False
+    )
+    category_id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("categories.uuid"), nullable=False
+    )
+    amount: Mapped[Numeric] = mapped_column(Numeric(10, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), default="USD")
+    date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+        nullable=False,
+    )
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    user = relationship("User", back_populates="expenses")
+    category = relationship("Category", back_populates="expenses")

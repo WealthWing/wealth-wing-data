@@ -7,7 +7,6 @@ from sqlalchemy import text
 
 category_router = APIRouter()
 
-
 @category_router.post("/create", status_code=201)
 async def create_category(category_data: CategoryCreate, db: db_session):
 
