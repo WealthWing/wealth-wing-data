@@ -1,12 +1,13 @@
 from typing import List
 from fastapi import APIRouter, HTTPException
-from src.model.models import Category, CategoryTypeEnum
+from src.model.models import Category
 from src.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 from src.database.connect import db_session
-from sqlalchemy import text
+
 
 category_router = APIRouter()
 
+# TODO: missing response model
 @category_router.post("/create", status_code=201)
 async def create_category(category_data: CategoryCreate, db: db_session):
 

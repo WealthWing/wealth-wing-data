@@ -111,7 +111,7 @@ class Category(Base):
     uuid: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
     )
-    title: Mapped[str] = mapped_column(String, nullable=False)
+    title: Mapped[str] = mapped_column(String(20), nullable=False)
     type: Mapped[CategoryTypeEnum] = mapped_column(
         PgEnum(CategoryTypeEnum, name="category_type", create_type=False),
         nullable=False,
@@ -146,6 +146,8 @@ class Expense(Base):
     amount: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="USD")
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
     )
@@ -155,8 +157,7 @@ class Expense(Base):
         onupdate=datetime.now(timezone.utc),
         nullable=False,
     )
-    title: Mapped[str] = mapped_column(String, nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
 
     user = relationship("User", back_populates="expenses")
     category = relationship("Category", back_populates="expenses")
