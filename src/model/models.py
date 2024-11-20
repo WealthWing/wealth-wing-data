@@ -111,7 +111,7 @@ class Category(Base):
     uuid: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
     )
-    title: Mapped[str] = mapped_column(String(20), nullable=False)
+    title: Mapped[str] = mapped_column(String(100), nullable=False)
     type: Mapped[CategoryTypeEnum] = mapped_column(
         PgEnum(CategoryTypeEnum, name="category_type", create_type=False),
         nullable=False,

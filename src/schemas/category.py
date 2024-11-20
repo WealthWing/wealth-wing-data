@@ -12,6 +12,7 @@ class CategoryCreate(CategoryBase):
     pass
 
 class CategoryUpdate(BaseModel):
+    title: Optional[str]
     description: Optional[str]
 
     class Config:

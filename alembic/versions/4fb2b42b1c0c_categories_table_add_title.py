@@ -21,7 +21,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.add_column('categories', sa.Column('title', sa.String(20), nullable=True))
     op.execute("UPDATE categories SET title = 'change'")
-    op.alter_column('subscriptions', 'amount', nullable=False)
+    op.alter_column('categories', 'amount', nullable=False)
 
 
 def downgrade() -> None:

@@ -53,7 +53,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("title", sa.String, nullable=False),
+        sa.Column("title", sa.String, nullable=False),          
         sa.Column("merchant", sa.String, nullable=True),
         sa.Column(
             "updated_at",

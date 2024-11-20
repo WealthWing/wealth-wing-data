@@ -27,18 +27,25 @@ async def create_category(category_data: CategoryCreate, db: db_session):
     return new_category
 
 
-@category_router.get("/categories", response_model=List[CategoryResponse])
+@category_router.get("/categories")
 async def get_categories(db: db_session):
-    categories = db.query(Category).all()
+ 
+ 
+    try:
+        categories = db.query(Category).all()
+  
+        if not categories:
+            raise HTTPException(status_code=404, detail="No categories found")
+        
+        return categories
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get categories: {e}")
 
-    if not categories:
-        raise HTTPException(status_code=404, detail="No categories found")
 
-    return categories
 
 
 @category_router.put(
-    "/update/{category_id}", status_code=201, response_model=CategoryUpdate
+    "/update/{category_id}", status_code=201, response_model=CategoryResponse
 )
 async def update_category(
     category_data: CategoryUpdate,
@@ -53,6 +60,7 @@ async def update_category(
 
     try:
         category_dict = category_data.model_dump(exclude_unset=True)
+        print(category_dict, "category_dict")
         for key, value in category_dict.items():
             if getattr(category_model, key) != value:
                 setattr(category_model, key, value)
