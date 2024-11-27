@@ -23,3 +23,4 @@ deactivate (deactivate venv)
 
 - Apply the Migration: `alembic upgrade head`
 - `alembic history`: This shows all the migrations in chronological order. 
+- `alembic stamp head`: set the migration

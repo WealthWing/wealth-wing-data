@@ -6,6 +6,8 @@ from typing import Annotated
 from fastapi import Depends
 import os
 
+
+
 load_dotenv()
 
 sql_url = os.getenv("SQLALCHEMY_DATABASE_URL")
@@ -22,4 +24,6 @@ def get_db():
         db.close()
         
         
-service = Annotated[Session, Depends(get_db)]  
+db_session = Annotated[Session, Depends(get_db)]  
+
+

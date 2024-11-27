@@ -11,7 +11,7 @@ from jwt import (
 
 )
 from src.model.models import User
-from src.database.connect import SessionLocal, service
+from src.database.connect import SessionLocal, db_session
 
 JWKS_URL = os.environ.get("COGNITO_JWKS_URL")
 COGNITO_USER_POOL_ID = os.environ.get("COGNITO_USER_POOL_ID")

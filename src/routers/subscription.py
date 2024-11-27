@@ -8,7 +8,7 @@ from src.schemas.subscription import (
 from src.model.models import Subscription
 from src.util.user import get_current_user
 from src.util.types import UserPool
-from src.database.connect import service
+from src.database.connect import db_session
 from typing import List
 from sqlalchemy.orm import joinedload
 
@@ -17,11 +17,11 @@ subscription_router = APIRouter()
 """ Create a new subscription """
 
 @subscription_router.post(
-    "/create", status_code=201, response_model=SubscriptionResponse
+    "/create", status_code=200, response_model=SubscriptionResponse
 )
 async def create_subscription(
     subscription_data: SubscriptionCreate,
-    db: service,
+    db: db_session,
     current_user: UserPool = Depends(get_current_user),
 ):
 
@@ -44,12 +44,12 @@ async def create_subscription(
 
 
 @subscription_router.put(
-    "/update/{subscription_id}", status_code=201, response_model=SubscriptionResponse
+    "/update/{subscription_id}", status_code=200, response_model=SubscriptionResponse
 )
 async def update_subscription(
     subscription_data: SubscriptionUpdate,
     subscription_id: str,
-    db: service,
+    db: db_session,
     current_user: UserPool = Depends(get_current_user),
 ):
 
@@ -84,15 +84,15 @@ async def update_subscription(
 
 
 @subscription_router.get(
-    "/summary", status_code=201, response_model=List[SubscriptionsAllResponse]
+    "/summary", status_code=200, response_model=List[SubscriptionsAllResponse]
 )
 async def get_user_subscriptions(
-    db: service,
+    db: db_session,
     current_user: UserPool = Depends(get_current_user),
 ):
 
     subscriptions = (
-        db.query(Subscription.uuid, Subscription.name, Subscription.cost)
+        db.query(Subscription.uuid, Subscription.name, Subscription.amount)
         .filter(Subscription.user_id == current_user.sub)
         .all()
     )
@@ -104,11 +104,11 @@ async def get_user_subscriptions(
 
 
 @subscription_router.get(
-    "/detail/{subscription_id}", status_code=201, response_model=SubscriptionResponse
+    "/detail/{subscription_id}", status_code=200, response_model=SubscriptionResponse
 )
 async def get_subscription(
     subscription_id: str,
-    db: service,
+    db: db_session,
     current_user: UserPool = Depends(get_current_user),
 ):
     # load join table joinedload(Subscription.user)
@@ -128,7 +128,7 @@ async def get_subscription(
 @subscription_router.delete("/delete/{subscription_id}", status_code=204)
 async def delete_subscription(
     subscription_id: str,
-    db: service,
+    db: db_session,
     current_user: UserPool = Depends(get_current_user),
 ):
 

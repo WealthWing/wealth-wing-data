@@ -1,8 +1,8 @@
-"""expenses table
+"""Recreate missing migration
 
-Revision ID: 0152b3576a24
-Revises: 274966fe8308
-Create Date: 2024-11-02 22:48:19.406913
+Revision ID: dbc238020a3b
+Revises: 4fb2b42b1c0c
+Create Date: 2024-11-20 11:22:32.951128
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0152b3576a24'
-down_revision: Union[str, None] = '274966fe8308'
+revision = '63abf71bf9d9'
+down_revision = '4fb2b42b1c0c'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
