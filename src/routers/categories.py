@@ -45,7 +45,7 @@ async def get_categories(db: db_session):
 
 
 @category_router.put(
-    "/update/{category_id}", status_code=201, response_model=CategoryResponse
+    "/update/{category_id}", status_code=200, response_model=CategoryResponse
 )
 async def update_category(
     category_data: CategoryUpdate,
@@ -60,7 +60,7 @@ async def update_category(
 
     try:
         category_dict = category_data.model_dump(exclude_unset=True)
-        print(category_dict, "category_dict")
+    
         for key, value in category_dict.items():
             if getattr(category_model, key) != value:
                 setattr(category_model, key, value)

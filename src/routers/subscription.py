@@ -17,7 +17,7 @@ subscription_router = APIRouter()
 """ Create a new subscription """
 
 @subscription_router.post(
-    "/create", status_code=201, response_model=SubscriptionResponse
+    "/create", status_code=200, response_model=SubscriptionResponse
 )
 async def create_subscription(
     subscription_data: SubscriptionCreate,
@@ -44,7 +44,7 @@ async def create_subscription(
 
 
 @subscription_router.put(
-    "/update/{subscription_id}", status_code=201, response_model=SubscriptionResponse
+    "/update/{subscription_id}", status_code=200, response_model=SubscriptionResponse
 )
 async def update_subscription(
     subscription_data: SubscriptionUpdate,
@@ -84,7 +84,7 @@ async def update_subscription(
 
 
 @subscription_router.get(
-    "/summary", status_code=201, response_model=List[SubscriptionsAllResponse]
+    "/summary", status_code=200, response_model=List[SubscriptionsAllResponse]
 )
 async def get_user_subscriptions(
     db: db_session,
@@ -104,7 +104,7 @@ async def get_user_subscriptions(
 
 
 @subscription_router.get(
-    "/detail/{subscription_id}", status_code=201, response_model=SubscriptionResponse
+    "/detail/{subscription_id}", status_code=200, response_model=SubscriptionResponse
 )
 async def get_subscription(
     subscription_id: str,

@@ -5,24 +5,29 @@ from datetime import datetime
 
 
 class ExpenseBase(BaseModel):
-    user_id: UUID
     category_id: UUID
     title: str
     amount: int
-    description: Optional[str]
-    date: Optional[datetime]
-    currency: Optional[str]
+    description: Optional[str] = None
+    date: Optional[datetime] = None
+    currency: Optional[str] = None
     
 class ExpenseCreate(ExpenseBase):
     pass
 
+class ExpenseResponse(ExpenseBase):
+    uuid: UUID
+    user_id: UUID
+    class Config:
+        from_attributes = True
+
 class ExpenseUpdate(BaseModel):
-    category_id: Optional[UUID]
-    title: Optional[str]
-    description: Optional[str]
-    amount: Optional[int]
-    date: Optional[datetime]
-    currency: Optional[str]
+    category_id: Optional[UUID] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    amount: Optional[int] = None
+    date: Optional[datetime] = None
+    currency: Optional[str] = None
     
     class Config:
         from_attributes = True    

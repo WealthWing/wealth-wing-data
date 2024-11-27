@@ -12,11 +12,9 @@ class CategoryCreate(CategoryBase):
     pass
 
 class CategoryUpdate(BaseModel):
-    title: Optional[str]
-    description: Optional[str]
+    title: Optional[str] = None
+    description: Optional[str] = None
 
-    class Config:
-        from_attributes = True    
 
 class CategoryResponse(CategoryBase):
     uuid: UUID
