@@ -2,14 +2,14 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 from src.model.models import Category
 from src.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
-from src.database.connect import db_session
+from src.database.connect import session
 
 
 category_router = APIRouter()
 
 # TODO: missing response model
 @category_router.post("/create", status_code=201)
-async def create_category(category_data: CategoryCreate, db: db_session):
+async def create_category(category_data: CategoryCreate, db: session):
 
     new_category = Category(
         type=category_data.type,
@@ -28,7 +28,7 @@ async def create_category(category_data: CategoryCreate, db: db_session):
 
 
 @category_router.get("/categories")
-async def get_categories(db: db_session):
+async def get_categories(db: session):
  
  
     try:
@@ -50,7 +50,7 @@ async def get_categories(db: db_session):
 async def update_category(
     category_data: CategoryUpdate,
     category_id: str,
-    db: db_session,
+    db: session,
 ):
 
     category_model = db.query(Category).filter(Category.uuid == category_id).first()

@@ -41,8 +41,9 @@ class User(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    subscriptions = relationship("Subscription", back_populates="user")
+    subscriptions = relationship("Subscription", back_populates="user", cascade="all, delete-orphan")
     expenses = relationship("Expense", back_populates="user")
+    projects = relationship("Project", back_populates="user")
 
 
 class Subscription(Base):
@@ -83,19 +84,12 @@ class Subscription(Base):
     support_contact = Column(String(255))
     website_url = Column(String(255))
 
-    user = relationship("User", back_populates="subscriptions")
-    category = relationship("Category", back_populates="subscriptions")
-
-
-class TestTable(Base):
-    __tablename__ = "test_table"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    role = Column(Enum(UserRole, name="userrole"), nullable=False)
+    user: Mapped["User"] = relationship("User", back_populates="subscriptions")
+    category: Mapped["Category"] = relationship("Category", back_populates="subscriptions")
 
 
 class CategoryTypeEnum(enum.Enum):
+    INCOME = "INCOME"
     SUBSCRIPTIONS_AND_MEMBERSHIPS = "SUBSCRIPTIONS_AND_MEMBERSHIPS"
     VARIABLE_EXPENSES = "VARIABLE_EXPENSES"
     SAVINGS_AND_INVESTMENTS = "SAVINGS_AND_INVESTMENTS"
@@ -143,6 +137,7 @@ class Expense(Base):
     category_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("categories.uuid"), nullable=False
     )
+    scope_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("scopes.uuid"), nullable=True)
     amount: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="USD")
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -159,21 +154,21 @@ class Expense(Base):
     )
 
 
-    user = relationship("User", back_populates="expenses")
-    category = relationship("Category", back_populates="expenses")
-
-
+    user: Mapped["User"] = relationship("User", back_populates="expenses")
+    category: Mapped["Category"] = relationship("Category", back_populates="expenses")
+    scope: Mapped["Scope"] = relationship("Scope", back_populates="expenses")
+    
 class Project(Base):
     __tablename__ = "projects"
 
     uuid: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
     )
-    project_name: Mapped[str] = mapped_column(String(32), nullable=False)
-    description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
-    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    budget: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
+    user_id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("user_table.uuid"), nullable=False
+    )
+    
+    project_name: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
     )
@@ -183,3 +178,46 @@ class Project(Base):
         onupdate=datetime.now(timezone.utc),
         nullable=False,
     )
+
+
+    user: Mapped["User"] = relationship("User", back_populates="projects")
+    scopes: Mapped["Scope"] = relationship("Scope", back_populates="project")      
+
+
+class Scope(Base):
+    __tablename__ = "scopes"
+
+    uuid: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
+    )
+    project_id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.uuid"), nullable=False
+    )
+    scope_name: Mapped[str] = mapped_column(String(32), nullable=False)
+    description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
+    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    budget: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+        nullable=False,
+    )
+    
+    project: Mapped["Project"] = relationship("Project", back_populates="scopes", cascade="all")
+    expenses: Mapped["Expense"] = relationship("Expense", back_populates="scope", cascade="all")   
+    
+  
+    
+
+     
+     
+     
+
+
+     
+        

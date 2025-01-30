@@ -2,7 +2,7 @@ from fastapi import APIRouter
 import logging
 from fastapi import   HTTPException
 from sqlalchemy import text
-from src.database.connect import db_session
+from src.database.connect import session
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -14,7 +14,7 @@ async def ping():
 
 
 @router.get("/test_db_connection")
-def test_db_connection(db: db_session):
+def test_db_connection(db: session):
     try:
         result = db.execute(text("SELECT NOW()")).first()
         logger.info("test_db_connection endpoint called")

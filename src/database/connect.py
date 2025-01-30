@@ -24,6 +24,6 @@ def get_db():
         db.close()
         
         
-db_session = Annotated[Session, Depends(get_db)]  
+session = Annotated[Session, Depends(get_db)]  
 
 

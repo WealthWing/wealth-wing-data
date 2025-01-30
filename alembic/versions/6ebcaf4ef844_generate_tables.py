@@ -1,8 +1,8 @@
-"""Add Project Table
+"""generate tables
 
-Revision ID: 7d84039b7402
+Revision ID: 6ebcaf4ef844
 Revises: 
-Create Date: 2025-01-29 20:49:04.534253
+Create Date: 2025-01-30 10:04:07.374842
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '7d84039b7402'
+revision: str = '6ebcaf4ef844'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -23,32 +23,13 @@ def upgrade() -> None:
     op.create_table('categories',
     sa.Column('uuid', sa.UUID(), nullable=False),
     sa.Column('title', sa.String(length=100), nullable=False),
-    sa.Column('type', postgresql.ENUM('SUBSCRIPTIONS_AND_MEMBERSHIPS', 'VARIABLE_EXPENSES', 'SAVINGS_AND_INVESTMENTS', 'DEBT_PAYMENTS', 'FIXED_EXPENSES', 'DISCRETIONARY_EXPENSES', 'MISCELLANEOUS', name='category_type'), nullable=False),
+    sa.Column('type', postgresql.ENUM('INCOME', 'SUBSCRIPTIONS_AND_MEMBERSHIPS', 'VARIABLE_EXPENSES', 'SAVINGS_AND_INVESTMENTS', 'DEBT_PAYMENTS', 'FIXED_EXPENSES', 'DISCRETIONARY_EXPENSES', 'MISCELLANEOUS', name='category_type'), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.PrimaryKeyConstraint('uuid')
     )
     op.create_index(op.f('ix_categories_uuid'), 'categories', ['uuid'], unique=False)
-    op.create_table('projects',
-    sa.Column('uuid', sa.UUID(), nullable=False),
-    sa.Column('project_name', sa.String(length=32), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('start_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('end_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('budget', sa.BigInteger(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.PrimaryKeyConstraint('uuid')
-    )
-    op.create_index(op.f('ix_projects_uuid'), 'projects', ['uuid'], unique=False)
-    op.create_table('test_table',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(), nullable=False),
-    sa.Column('role', sa.Enum('Admin', 'User', 'User_Manager', 'User_Admin', 'User_Viewer', 'User_Editor', name='userrole'), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_test_table_id'), 'test_table', ['id'], unique=False)
     op.create_table('user_table',
     sa.Column('uuid', sa.UUID(), nullable=False),
     sa.Column('email', sa.String(), nullable=False),
@@ -61,22 +42,16 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_user_table_email'), 'user_table', ['email'], unique=True)
     op.create_index(op.f('ix_user_table_uuid'), 'user_table', ['uuid'], unique=False)
-    op.create_table('expenses',
+    op.create_table('projects',
     sa.Column('uuid', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('category_id', sa.UUID(), nullable=False),
-    sa.Column('amount', sa.BigInteger(), nullable=False),
-    sa.Column('currency', sa.String(length=10), nullable=False),
-    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('title', sa.String(), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('project_name', sa.String(length=100), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['category_id'], ['categories.uuid'], ),
     sa.ForeignKeyConstraint(['user_id'], ['user_table.uuid'], ),
     sa.PrimaryKeyConstraint('uuid')
     )
-    op.create_index(op.f('ix_expenses_uuid'), 'expenses', ['uuid'], unique=False)
+    op.create_index(op.f('ix_projects_uuid'), 'projects', ['uuid'], unique=False)
     op.create_table('subscriptions',
     sa.Column('uuid', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -108,22 +83,54 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('uuid')
     )
     op.create_index(op.f('ix_subscriptions_uuid'), 'subscriptions', ['uuid'], unique=False)
+    op.create_table('scopes',
+    sa.Column('uuid', sa.UUID(), nullable=False),
+    sa.Column('project_id', sa.UUID(), nullable=False),
+    sa.Column('scope_name', sa.String(length=32), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('start_date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('end_date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('budget', sa.BigInteger(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.uuid'], ),
+    sa.PrimaryKeyConstraint('uuid')
+    )
+    op.create_index(op.f('ix_scopes_uuid'), 'scopes', ['uuid'], unique=False)
+    op.create_table('expenses',
+    sa.Column('uuid', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('category_id', sa.UUID(), nullable=False),
+    sa.Column('scope_id', sa.UUID(), nullable=True),
+    sa.Column('amount', sa.BigInteger(), nullable=False),
+    sa.Column('currency', sa.String(length=10), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('title', sa.String(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['category_id'], ['categories.uuid'], ),
+    sa.ForeignKeyConstraint(['scope_id'], ['scopes.uuid'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['user_table.uuid'], ),
+    sa.PrimaryKeyConstraint('uuid')
+    )
+    op.create_index(op.f('ix_expenses_uuid'), 'expenses', ['uuid'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index(op.f('ix_subscriptions_uuid'), table_name='subscriptions')
-    op.drop_table('subscriptions')
     op.drop_index(op.f('ix_expenses_uuid'), table_name='expenses')
     op.drop_table('expenses')
+    op.drop_index(op.f('ix_scopes_uuid'), table_name='scopes')
+    op.drop_table('scopes')
+    op.drop_index(op.f('ix_subscriptions_uuid'), table_name='subscriptions')
+    op.drop_table('subscriptions')
+    op.drop_index(op.f('ix_projects_uuid'), table_name='projects')
+    op.drop_table('projects')
     op.drop_index(op.f('ix_user_table_uuid'), table_name='user_table')
     op.drop_index(op.f('ix_user_table_email'), table_name='user_table')
     op.drop_table('user_table')
-    op.drop_index(op.f('ix_test_table_id'), table_name='test_table')
-    op.drop_table('test_table')
-    op.drop_index(op.f('ix_projects_uuid'), table_name='projects')
-    op.drop_table('projects')
     op.drop_index(op.f('ix_categories_uuid'), table_name='categories')
     op.drop_table('categories')
     # ### end Alembic commands ###
