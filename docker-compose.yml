@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:latest
+    container_name: local_postgres
+    environment:
+      POSTGRES_USER: ed
+      POSTGRES_PASSWORD: 123123
+      POSTGRES_DB: test_db2
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

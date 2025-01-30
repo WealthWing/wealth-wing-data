@@ -161,3 +161,25 @@ class Expense(Base):
 
     user = relationship("User", back_populates="expenses")
     category = relationship("Category", back_populates="expenses")
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    uuid: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
+    )
+    project_name: Mapped[str] = mapped_column(String(32), nullable=False)
+    description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
+    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    budget: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+        nullable=False,
+    )
