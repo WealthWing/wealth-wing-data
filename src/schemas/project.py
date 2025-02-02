@@ -5,6 +5,8 @@ from datetime import datetime
 
 class ProjectBase(BaseModel):
    project_name: str
+   start_date: Optional[datetime] = None
+   end_date: Optional[datetime] = None
 
 class ProjectCreate(ProjectBase):
     pass

@@ -169,6 +169,8 @@ class Project(Base):
     )
     
     project_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
     )
@@ -181,7 +183,7 @@ class Project(Base):
 
 
     user: Mapped["User"] = relationship("User", back_populates="projects")
-    scopes: Mapped["Scope"] = relationship("Scope", back_populates="project")      
+    scopes: Mapped["Scope"] = relationship("Scope", back_populates="project", cascade="all, delete-orphan")      
 
 
 class Scope(Base):
@@ -195,9 +197,9 @@ class Scope(Base):
     )
     scope_name: Mapped[str] = mapped_column(String(32), nullable=False)
     description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
-    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    budget: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
+    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    budget: Mapped[BigInteger] = mapped_column(BigInteger, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=True
     )
@@ -208,8 +210,8 @@ class Scope(Base):
         nullable=False,
     )
     
-    project: Mapped["Project"] = relationship("Project", back_populates="scopes", cascade="all")
-    expenses: Mapped["Expense"] = relationship("Expense", back_populates="scope", cascade="all")   
+    project: Mapped["Project"] = relationship("Project", back_populates="scopes")
+    expenses: Mapped["Expense"] = relationship("Expense", back_populates="scope")   
     
   
     
