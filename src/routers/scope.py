@@ -1,11 +1,12 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from src.schemas.scope import ScopeCreate, ScopeUpdate, ScopeResponse, ScopeRequest
-from src.util.types import UserPool
+
 from src.model.models import Scope
 from src.database.connect import session
-from src.util.user import get_current_user
+
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 
 scope_router = APIRouter()
@@ -32,9 +33,10 @@ async def create_scope(
 
 @scope_router.get("/all", status_code=200)
 async def get_scopes(scope_request: ScopeRequest, db: session):
-    stmt = select(Scope).where(Scope.project_id == scope_request.project_id)
+    stmt = select(Scope).options(joinedload(Scope.expenses)).filter(Scope.project_id == scope_request.project_id).order_by(Scope.created_at.desc())
     
-    scopes = db.execute(stmt).scalars().all()
+    scopes = db.execute(stmt).scalars().unique().all()
+
     
     if not scopes:
         raise HTTPException(status_code=404, detail="No scopes found")

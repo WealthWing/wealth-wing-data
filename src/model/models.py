@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from src.database.connect import Base
 from sqlalchemy import (
     Column,
@@ -211,9 +211,9 @@ class Scope(Base):
     )
     
     project: Mapped["Project"] = relationship("Project", back_populates="scopes")
-    expenses: Mapped["Expense"] = relationship("Expense", back_populates="scope")   
+    expenses: Mapped[List[Expense]] = relationship("Expense", back_populates="scope")   
     
-  
+ 
     
 
      

@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from src.model.models import Category
 from src.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 from src.database.connect import session
+from sqlalchemy.orm import joinedload
 
 
 category_router = APIRouter()
@@ -32,7 +33,7 @@ async def get_categories(db: session):
  
  
     try:
-        categories = db.query(Category).all()
+        categories = db.query(Category).options(joinedload(Category.expenses)).all()
   
         if not categories:
             raise HTTPException(status_code=404, detail="No categories found")
