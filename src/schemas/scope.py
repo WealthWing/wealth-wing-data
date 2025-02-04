@@ -1,7 +1,9 @@
 from datetime import datetime
 from pydantic import BaseModel
 from uuid import UUID 
-from typing import Optional
+from typing import Optional, List
+from src.schemas.expense import ExpenseResponse
+
 
 class ScopeBase(BaseModel):
     scope_name: str
@@ -18,6 +20,8 @@ class ScopeResponse(ScopeBase):
     uuid: UUID
     created_at: datetime
     updated_at: datetime
+    
+    expenses: List[ExpenseResponse] = []
     
     class Config:
         from_attributes = True
