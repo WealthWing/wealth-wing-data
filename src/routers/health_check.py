@@ -1,8 +1,12 @@
-from fastapi import APIRouter
+from typing import Annotated
+from fastapi import APIRouter, Depends
 import logging
 from fastapi import   HTTPException
 from sqlalchemy import text
-from src.database.connect import session
+from src.database.connect import  DBSession
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -14,11 +18,11 @@ async def ping():
 
 
 @router.get("/test_db_connection")
-def test_db_connection(db: session):
+async def test_db_connection(db: DBSession):
     try:
-        result = db.execute(text("SELECT NOW()")).first()
-        logger.info("test_db_connection endpoint called")
-        return {"message": "Database connection successful!", "time": result[0]}
+        result = await db.execute(text("SELECT NOW()"))
+        row = result.first()
+        return {"message": "DB connection successful!", "time": row[0]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     

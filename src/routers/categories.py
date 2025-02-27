@@ -1,16 +1,16 @@
-from typing import List
-from fastapi import APIRouter, HTTPException
+from typing import Annotated, List
+from fastapi import APIRouter, Depends, HTTPException
 from src.model.models import Category
 from src.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
-from src.database.connect import session
+from src.database.connect import DBSession
 from sqlalchemy.orm import joinedload
-
+from sqlalchemy.ext.asyncio import AsyncSession
 
 category_router = APIRouter()
 
 # TODO: missing response model
 @category_router.post("/create", status_code=201)
-async def create_category(category_data: CategoryCreate, db: session):
+async def create_category(category_data: CategoryCreate, db: DBSession):
 
     new_category = Category(
         type=category_data.type,
@@ -29,7 +29,7 @@ async def create_category(category_data: CategoryCreate, db: session):
 
 
 @category_router.get("/categories")
-async def get_categories(db: session):
+async def get_categories(db: DBSession):
  
  
     try:
@@ -51,7 +51,7 @@ async def get_categories(db: session):
 async def update_category(
     category_data: CategoryUpdate,
     category_id: str,
-    db: session,
+    db: DBSession,
 ):
 
     category_model = db.query(Category).filter(Category.uuid == category_id).first()

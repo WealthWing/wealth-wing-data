@@ -11,7 +11,7 @@ from jwt import (
 
 )
 from src.model.models import User
-from src.database.connect import SessionLocal, session
+#from src.database.connect import SessionLocal, session
 
 JWKS_URL = os.environ.get("COGNITO_JWKS_URL")
 COGNITO_USER_POOL_ID = os.environ.get("COGNITO_USER_POOL_ID")
@@ -64,24 +64,24 @@ class AuthMiddleware(BaseHTTPMiddleware):
                     status_code=400, content={"detail": "Invalid token payload"}
                 )
 #
-            db: Session = SessionLocal()
+            #db: Session = SessionLocal()
 #
-            user = db.query(User).filter(User.uuid == user_uuid).first()
+            #user = db.query(User).filter(User.uuid == user_uuid).first()
         
-            if not user:
-                # User does not exist, create a new user
-                new_user = User(
-                    uuid=user_uuid,
-                    email=payload.get("email"),
-                    role="Admin",
-                    name="Erdoan",
-                    last_name="Shaziman",
-                )
-                db.add(new_user)
-                db.commit()
-                db.refresh(new_user)
-                user = new_user
-
+            #if not user:
+            #    # User does not exist, create a new user
+            #    new_user = User(
+            #        uuid=user_uuid,
+            #        email=payload.get("email"),
+            #        role="Admin",
+            #        name="Erdoan",
+            #        last_name="Shaziman",
+            #    )
+            #    db.add(new_user)
+            #    db.commit()
+            #    db.refresh(new_user)
+            #    user = new_user
+#
             request.state.user = payload  # Store user info in request.state if needed
         except PyJWTError as e:
             return JSONResponse(

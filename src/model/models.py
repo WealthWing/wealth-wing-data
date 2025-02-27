@@ -12,6 +12,7 @@ from sqlalchemy import (
     Boolean,
     Text,
 )
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 import enum
@@ -180,6 +181,7 @@ class Project(Base):
         onupdate=datetime.now(timezone.utc),
         nullable=False,
     )
+    
 
 
     user: Mapped["User"] = relationship("User", back_populates="projects")
