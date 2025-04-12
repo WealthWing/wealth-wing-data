@@ -23,8 +23,8 @@ async def create_project(
         new_project = Project(**project)
 
         db.add(new_project)
-        db.commit()
-        db.refresh(new_project)
+        await db.commit()
+        await db.refresh(new_project)
 
         return new_project
     except Exception as e:
@@ -87,8 +87,8 @@ async def update_project(
                 setattr(project, key, value)
 
         db.add(project)
-        db.commit()
-        db.refresh(project)
+        await db.commit()
+        await db.refresh(project)
 
         return project
     except Exception as e:
@@ -109,7 +109,7 @@ async def delete_project(
             raise HTTPException(status_code=404, detail="Project not found")
 
         db.delete(project)
-        db.commit()
+        await db.commit()
 
         return {"message": "Project deleted successfully!"}
     except Exception as e:

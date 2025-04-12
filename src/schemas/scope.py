@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from uuid import UUID 
 from typing import Optional, List
 from src.schemas.expense import ExpenseResponse
@@ -20,7 +20,7 @@ class ScopeResponse(ScopeBase):
     uuid: UUID
     created_at: datetime
     updated_at: datetime
-    
+    total_cost: Optional[int] = Field(default=0, description="Total cost of all expenses in the scope")
     expenses: List[ExpenseResponse] = []
     
     class Config:

@@ -5,6 +5,7 @@ from src.model.models import Scope
 from src.database.connect import DBSession
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
+from src.model.errors import NotFoundError
 
 
 scope_router = APIRouter()
@@ -20,8 +21,8 @@ async def create_scope(
         new_scope = Scope(**scope)
 
         db.add(new_scope)
-        db.commit()
-        db.refresh(new_scope)
+        await db.commit()
+        await db.refresh(new_scope)
         return new_scope
     except Exception as e:
         db.rollback()
@@ -41,12 +42,16 @@ async def get_scopes(project_id: str, db: DBSession):
             .order_by(Scope.created_at.desc())
         )
 
-        scopes = db.execute(stmt).scalars().unique().all()
+        scopes = await db.execute(stmt)
 
-        if not scopes:
-            raise HTTPException(status_code=404, detail="No scopes found")
+        result = scopes.unique().scalars().all()
 
-        return scopes
+        if not result:
+            raise NotFoundError
+
+        return result
+    except NotFoundError as e:
+        raise NotFoundError
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get scopes: {e}")

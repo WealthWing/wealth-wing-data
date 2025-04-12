@@ -21,11 +21,11 @@ app = FastAPI()
 
 # Add routers
 app.include_router(health_check.router, prefix="/health", tags=["health"])
-#app.include_router(subscription_router, prefix="/subscription", tags=["subscription"])
-#app.include_router(user_router, prefix="/user", tags=["user"])
-#app.include_router(category_router, prefix="/category", tags=["category"])
-#app.include_router(expense_router, prefix="/expense", tags=["expense"])
-#app.include_router(scope_router, prefix="/scope", tags=["scope"])
+app.include_router(subscription_router, prefix="/subscription", tags=["subscription"])
+app.include_router(user_router, prefix="/user", tags=["user"])
+app.include_router(category_router, prefix="/category", tags=["category"])
+app.include_router(expense_router, prefix="/expense", tags=["expense"])
+app.include_router(scope_router, prefix="/scope", tags=["scope"])
 app.include_router(project_router, prefix="/project", tags=["project"])
 
 # Add middleware

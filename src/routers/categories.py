@@ -5,8 +5,10 @@ from src.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdat
 from src.database.connect import DBSession
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 category_router = APIRouter()
+
 
 # TODO: missing response model
 @category_router.post("/create", status_code=201)
@@ -28,21 +30,23 @@ async def create_category(category_data: CategoryCreate, db: DBSession):
     return new_category
 
 
-@category_router.get("/categories")
+@category_router.get(
+    "/categories", status_code=200, response_model=List[CategoryResponse]
+)
 async def get_categories(db: DBSession):
- 
- 
+
     try:
-        categories = db.query(Category).options(joinedload(Category.expenses)).all()
-  
+        stmt = select(Category)
+
+        result = await db.execute(stmt)
+        categories = result.scalars().all()
+
         if not categories:
             raise HTTPException(status_code=404, detail="No categories found")
-        
+
         return categories
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get categories: {e}")
-
-
 
 
 @category_router.put(
@@ -53,22 +57,24 @@ async def update_category(
     category_id: str,
     db: DBSession,
 ):
-
-    category_model = db.query(Category).filter(Category.uuid == category_id).first()
+    category_stmt = select(Category).filter(Category.uuid == category_id)
+    category_result = await db.execute(category_stmt)
+    category_model = category_result.scalars().first()
+    
 
     if not category_model:
         raise HTTPException(status_code=404, detail="Category not found")
 
     try:
         category_dict = category_data.model_dump(exclude_unset=True)
-    
+
         for key, value in category_dict.items():
             if getattr(category_model, key) != value:
                 setattr(category_model, key, value)
 
         db.add(category_model)
-        db.commit()
-        db.refresh(category_model)
+        await db.commit()
+        await db.refresh(category_model)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update category: {e}")

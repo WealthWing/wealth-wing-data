@@ -11,10 +11,11 @@ from sqlalchemy import (
     Numeric,
     Boolean,
     Text,
+    select,
 )
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy.orm import relationship, Mapped, mapped_column, column_property
 import enum
 from datetime import datetime, timezone
 import uuid
@@ -42,7 +43,9 @@ class User(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    subscriptions = relationship("Subscription", back_populates="user", cascade="all, delete-orphan")
+    subscriptions = relationship(
+        "Subscription", back_populates="user", cascade="all, delete-orphan"
+    )
     expenses = relationship("Expense", back_populates="user")
     projects = relationship("Project", back_populates="user")
 
@@ -86,7 +89,9 @@ class Subscription(Base):
     website_url = Column(String(255))
 
     user: Mapped["User"] = relationship("User", back_populates="subscriptions")
-    category: Mapped["Category"] = relationship("Category", back_populates="subscriptions")
+    category: Mapped["Category"] = relationship(
+        "Category", back_populates="subscriptions"
+    )
 
 
 class CategoryTypeEnum(enum.Enum):
@@ -138,7 +143,9 @@ class Expense(Base):
     category_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("categories.uuid"), nullable=False
     )
-    scope_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("scopes.uuid"), nullable=True)
+    scope_id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scopes.uuid"), nullable=True
+    )
     amount: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="USD")
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -154,11 +161,11 @@ class Expense(Base):
         nullable=False,
     )
 
-
     user: Mapped["User"] = relationship("User", back_populates="expenses")
     category: Mapped["Category"] = relationship("Category", back_populates="expenses")
     scope: Mapped["Scope"] = relationship("Scope", back_populates="expenses")
-    
+
+
 class Project(Base):
     __tablename__ = "projects"
 
@@ -168,7 +175,7 @@ class Project(Base):
     user_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("user_table.uuid"), nullable=False
     )
-    
+
     project_name: Mapped[str] = mapped_column(String(100), nullable=False)
     start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -181,11 +188,11 @@ class Project(Base):
         onupdate=datetime.now(timezone.utc),
         nullable=False,
     )
-    
-
 
     user: Mapped["User"] = relationship("User", back_populates="projects")
-    scopes: Mapped["Scope"] = relationship("Scope", back_populates="project", cascade="all, delete-orphan")      
+    scopes: Mapped["Scope"] = relationship(
+        "Scope", back_populates="project", cascade="all, delete-orphan"
+    )
 
 
 class Scope(Base):
@@ -211,17 +218,13 @@ class Scope(Base):
         onupdate=datetime.now(timezone.utc),
         nullable=False,
     )
-    
+
     project: Mapped["Project"] = relationship("Project", back_populates="scopes")
-    expenses: Mapped[List[Expense]] = relationship("Expense", back_populates="scope")   
-    
- 
-    
+    expenses: Mapped[List[Expense]] = relationship("Expense", back_populates="scope")
 
-     
-     
-     
-
-
-     
-        
+    total_cost = column_property(
+        select(func.sum(Expense.amount))
+        .where(Expense.scope_id == uuid)
+        .correlate_except(Expense)
+        .label("total_cost")
+    )
