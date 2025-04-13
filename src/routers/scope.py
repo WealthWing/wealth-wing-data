@@ -4,7 +4,7 @@ from src.schemas.scope import ScopeCreate, ScopeUpdate, ScopeResponse, ScopeRequ
 from src.model.models import Scope
 from src.database.connect import DBSession
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from src.model.errors import NotFoundError
 
 
@@ -23,10 +23,17 @@ async def create_scope(
         db.add(new_scope)
         await db.commit()
         await db.refresh(new_scope)
-        return new_scope
+        
+        result = await db.execute(
+            select(Scope)
+            .options(selectinload(Scope.expenses))
+            .filter_by(uuid=new_scope.uuid)
+        )
+        loaded_scope = result.scalar_one()
+        return ScopeResponse.model_validate(loaded_scope)
     except Exception as e:
-        db.rollback()
-        raise Exception(f"error message: {str(e)}")
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @scope_router.get(
@@ -47,7 +54,7 @@ async def get_scopes(project_id: str, db: DBSession):
         result = scopes.unique().scalars().all()
 
         if not result:
-            raise NotFoundError
+            return []
 
         return result
     except NotFoundError as e:

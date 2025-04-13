@@ -23,8 +23,9 @@ class ScopeResponse(ScopeBase):
     total_cost: Optional[int] = Field(default=0, description="Total cost of all expenses in the scope")
     expenses: List[ExpenseResponse] = []
     
-    class Config:
-        from_attributes = True
+    model_config = {
+         "from_attributes": True
+     }
         
         
 class ScopeUpdate(BaseModel):

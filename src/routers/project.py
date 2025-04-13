@@ -41,7 +41,7 @@ async def get_projects(
     projects = result.scalars().all()
 
     if not projects:
-        raise HTTPException(status_code=404, detail="No projects found")
+        return HTTPException(status_code=404, detail="No projects found")
 
     return projects
 
@@ -76,21 +76,24 @@ async def update_project(
     try:
         stmt = select(Project).filter_by(uuid=project_id, user_id=current_user.sub)
 
-        project = db.execute(stmt).scalars().first()
-        if not project:
+        project = await db.execute(stmt)
+        
+        result = project.scalars().first()
+        
+        if not result:
             raise HTTPException(status_code=404, detail="Project not found")
 
         project_dict = project_data.model_dump(exclude_unset=True)
 
         for key, value in project_dict.items():
-            if getattr(project, key) != value:
-                setattr(project, key, value)
+            if getattr(result, key) != value:
+                setattr(result, key, value)
 
-        db.add(project)
+        db.add(result)
         await db.commit()
-        await db.refresh(project)
+        await db.refresh(result)
 
-        return project
+        return result
     except Exception as e:
         raise Exception(f"error message: {str(e)}")
 
@@ -104,11 +107,13 @@ async def delete_project(
     try:
         stmt = select(Project).filter_by(uuid=project_id, user_id=current_user.sub)
 
-        project = db.execute(stmt).scalars().first()
-        if not project:
+        project = await db.execute(stmt)
+        result = project.scalars().first()
+        
+        if not result:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        db.delete(project)
+        await db.delete(result)
         await db.commit()
 
         return {"message": "Project deleted successfully!"}
