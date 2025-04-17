@@ -23,7 +23,7 @@ async def create_scope(
         db.add(new_scope)
         await db.commit()
         await db.refresh(new_scope)
-        
+
         result = await db.execute(
             select(Scope)
             .options(selectinload(Scope.expenses))

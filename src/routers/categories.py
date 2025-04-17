@@ -60,7 +60,6 @@ async def update_category(
     category_stmt = select(Category).filter(Category.uuid == category_id)
     category_result = await db.execute(category_stmt)
     category_model = category_result.scalars().first()
-    
 
     if not category_model:
         raise HTTPException(status_code=404, detail="Category not found")

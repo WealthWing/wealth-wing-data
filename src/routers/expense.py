@@ -10,18 +10,26 @@ from src.util.expense import create_expense_in_db
 
 expense_router = APIRouter()
 
+
 @expense_router.post("/create", status_code=200, response_model=ExpenseResponse)
-async def create_expense(expense_data: ExpenseCreate, db:DBSession, current_user: UserPool = Depends(get_current_user)):
+async def create_expense(
+    expense_data: ExpenseCreate,
+    db: DBSession,
+    current_user: UserPool = Depends(get_current_user),
+):
     return await create_expense_in_db(expense_data, db, current_user.sub)
 
+
 @expense_router.get("/all", status_code=200, response_model=List[ExpenseResponse])
-async def get_expenses(db:DBSession, current_user: UserPool = Depends(get_current_user)):
+async def get_expenses(
+    db: DBSession, current_user: UserPool = Depends(get_current_user)
+):
     expenses_stmt = select(Expense).filter(Expense.user_id == current_user.sub)
-  
+
     expenses = await db.execute(expenses_stmt)
     result = expenses.scalars().all()
-    
+
     if not result:
         raise HTTPException(status_code=404, detail="No expenses found")
-    
+
     return result

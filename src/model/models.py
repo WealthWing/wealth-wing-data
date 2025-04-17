@@ -144,7 +144,7 @@ class Expense(Base):
         UUID(as_uuid=True), ForeignKey("categories.uuid"), nullable=False
     )
     scope_id: Mapped[UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("scopes.uuid"), nullable=True
+        UUID(as_uuid=True), ForeignKey("scopes.uuid", ondelete="CASCADE"), nullable=True
     )
     amount: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="USD")
@@ -201,9 +201,11 @@ class Scope(Base):
     uuid: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
     )
-    project_id: Mapped[UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.uuid"), nullable=False
-    )
+    project_id = Column(
+    UUID(as_uuid=True),
+    ForeignKey("projects.uuid", ondelete="CASCADE"),
+    nullable=False
+)
     scope_name: Mapped[str] = mapped_column(String(32), nullable=False)
     description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
     start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)

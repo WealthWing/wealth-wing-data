@@ -77,9 +77,9 @@ async def update_project(
         stmt = select(Project).filter_by(uuid=project_id, user_id=current_user.sub)
 
         project = await db.execute(stmt)
-        
+
         result = project.scalars().first()
-        
+
         if not result:
             raise HTTPException(status_code=404, detail="Project not found")
 
@@ -109,7 +109,7 @@ async def delete_project(
 
         project = await db.execute(stmt)
         result = project.scalars().first()
-        
+
         if not result:
             raise HTTPException(status_code=404, detail="Project not found")
 
