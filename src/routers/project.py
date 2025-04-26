@@ -2,10 +2,11 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from src.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from src.util.types import UserPool
-from src.model.models import Project
+from src.model.models import Project, Scope
 from src.database.connect import DBSession
 from src.util.user import get_current_user
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 
 project_router = APIRouter()
@@ -32,16 +33,15 @@ async def create_project(
         raise Exception(f"error message: {str(e)}")
 
 
-@project_router.get("/all", status_code=200, response_model=List[ProjectResponse])
+@project_router.get("/all", response_model=List[ProjectResponse])
 async def get_projects(
     db: DBSession, current_user: UserPool = Depends(get_current_user)
 ):
-    stmt = select(Project).where(Project.user_id == current_user.sub)
+    stmt = select(Project).where(Project.user_id == current_user.sub).order_by(Project.updated_at.desc())
     result = await db.execute(stmt)
     projects = result.scalars().all()
-
-    if not projects:
-        return HTTPException(status_code=404, detail="No projects found")
+    
+    print(projects[0].total_spent, "total spent")
 
     return projects
 
@@ -49,7 +49,7 @@ async def get_projects(
 @project_router.get(
     "/detail/{project_id}", status_code=200, response_model=ProjectResponse
 )
-async def get_projecy(
+async def get_project(
     project_id: str, db: DBSession, current_user: UserPool = Depends(get_current_user)
 ):
     stmt = select(Project).filter_by(uuid=project_id, user_id=current_user.sub)
@@ -57,7 +57,7 @@ async def get_projecy(
     result = await db.execute(stmt)
 
     project = result.scalars().first()
-
+    
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -119,3 +119,5 @@ async def delete_project(
         return {"message": "Project deleted successfully!"}
     except Exception as e:
         raise Exception(f"error message: {str(e)}")
+
+

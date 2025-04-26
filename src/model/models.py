@@ -165,36 +165,6 @@ class Expense(Base):
     category: Mapped["Category"] = relationship("Category", back_populates="expenses")
     scope: Mapped["Scope"] = relationship("Scope", back_populates="expenses")
 
-
-class Project(Base):
-    __tablename__ = "projects"
-
-    uuid: Mapped[UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
-    )
-    user_id: Mapped[UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("user_table.uuid"), nullable=False
-    )
-
-    project_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=datetime.now(timezone.utc),
-        onupdate=datetime.now(timezone.utc),
-        nullable=False,
-    )
-
-    user: Mapped["User"] = relationship("User", back_populates="projects")
-    scopes: Mapped["Scope"] = relationship(
-        "Scope", back_populates="project", cascade="all, delete-orphan"
-    )
-
-
 class Scope(Base):
     __tablename__ = "scopes"
 
@@ -230,3 +200,42 @@ class Scope(Base):
         .correlate_except(Expense)
         .label("total_cost")
     )
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    uuid: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("user_table.uuid"), nullable=False
+    )
+
+    project_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="projects")
+    scopes: Mapped["Scope"] = relationship(
+        "Scope", back_populates="project", cascade="all, delete-orphan"
+    )
+    total_spent = column_property(
+        select(func.sum(Scope.total_cost))
+        .where(Scope.project_id == uuid)
+        .correlate_except(Scope)
+        .label("total_spent")
+    )
+    
+    
+
+
