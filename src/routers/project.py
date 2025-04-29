@@ -6,7 +6,8 @@ from src.model.models import Project, Scope
 from src.database.connect import DBSession
 from src.util.user import get_current_user
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
+from sqlalchemy import Select, and_, desc, or_
 
 
 project_router = APIRouter()
@@ -27,7 +28,17 @@ async def create_project(
         await db.commit()
         await db.refresh(new_project)
 
-        return new_project
+        return ProjectResponse(
+            children=[],
+            created_at=new_project.created_at,
+            end_date=new_project.end_date,
+            parent_id=new_project.parent_id,
+            project_name=new_project.project_name,
+            start_date=new_project.start_date,
+            updated_at=new_project.updated_at,
+            uuid=new_project.uuid,
+            user_id=new_project.user_id,
+        )
     except Exception as e:
         db.rollback()
         raise Exception(f"error message: {str(e)}")
@@ -37,11 +48,14 @@ async def create_project(
 async def get_projects(
     db: DBSession, current_user: UserPool = Depends(get_current_user)
 ):
-    stmt = select(Project).where(Project.user_id == current_user.sub).order_by(Project.updated_at.desc())
+    stmt = (
+        select(Project)
+        .where(or_(Project.user_id == current_user.sub, Project.children == None))
+        .options(selectinload(Project.children))
+        .order_by(Project.updated_at.desc())
+    )
     result = await db.execute(stmt)
     projects = result.scalars().all()
-    
-    print(projects[0].total_spent, "total spent")
 
     return projects
 
@@ -52,12 +66,16 @@ async def get_projects(
 async def get_project(
     project_id: str, db: DBSession, current_user: UserPool = Depends(get_current_user)
 ):
-    stmt = select(Project).filter_by(uuid=project_id, user_id=current_user.sub)
+    stmt = (
+        select(Project)
+        .filter_by(uuid=project_id, user_id=current_user.sub)
+        .options(selectinload(Project.children))
+    )
 
     result = await db.execute(stmt)
 
     project = result.scalars().first()
-    
+
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -119,5 +137,3 @@ async def delete_project(
         return {"message": "Project deleted successfully!"}
     except Exception as e:
         raise Exception(f"error message: {str(e)}")
-
-

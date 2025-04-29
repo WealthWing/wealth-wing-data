@@ -140,6 +140,9 @@ class Expense(Base):
     user_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("user_table.uuid"), nullable=False
     )
+    project_id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.uuid", ondelete="CASCADE"), nullable=True
+    )
     category_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("categories.uuid"), nullable=False
     )
@@ -163,6 +166,7 @@ class Expense(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="expenses")
     category: Mapped["Category"] = relationship("Category", back_populates="expenses")
+    project: Mapped["Project"] = relationship("Category", back_populates="expenses")
     scope: Mapped["Scope"] = relationship("Scope", back_populates="expenses")
 
 class Scope(Base):
@@ -211,7 +215,9 @@ class Project(Base):
     user_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("user_table.uuid"), nullable=False
     )
-
+    parent_id: Mapped[Optional[UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.uuid"), nullable=True
+    )
     project_name: Mapped[str] = mapped_column(String(100), nullable=False)
     start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -229,6 +235,10 @@ class Project(Base):
     scopes: Mapped["Scope"] = relationship(
         "Scope", back_populates="project", cascade="all, delete-orphan"
     )
+    children: Mapped[List["Project"]] = relationship(
+        "Project", cascade="all, delete-orphan"
+    )
+   
     total_spent = column_property(
         select(func.sum(Scope.total_cost))
         .where(Scope.project_id == uuid)
