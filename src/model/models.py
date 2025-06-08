@@ -22,6 +22,9 @@ import uuid
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
 
 class UserRole(enum.Enum):
     Admin = "Admin"
@@ -146,8 +149,9 @@ class Expense(Base):
     category_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("categories.uuid"), nullable=False
     )
+    """ Deprecated: scope_id not in use"""
     scope_id: Mapped[UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("scopes.uuid", ondelete="CASCADE"), nullable=True
+        UUID(as_uuid=True), nullable=True
     )
     amount: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="USD")
@@ -167,43 +171,9 @@ class Expense(Base):
     user: Mapped["User"] = relationship("User", back_populates="expenses")
     category: Mapped["Category"] = relationship("Category", back_populates="expenses")
     project: Mapped["Project"] = relationship("Category", back_populates="expenses")
-    scope: Mapped["Scope"] = relationship("Scope", back_populates="expenses")
 
-class Scope(Base):
-    __tablename__ = "scopes"
 
-    uuid: Mapped[UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
-    )
-    project_id = Column(
-    UUID(as_uuid=True),
-    ForeignKey("projects.uuid", ondelete="CASCADE"),
-    nullable=False
-)
-    scope_name: Mapped[str] = mapped_column(String(32), nullable=False)
-    description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
-    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    budget: Mapped[BigInteger] = mapped_column(BigInteger, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=True
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=datetime.now(timezone.utc),
-        onupdate=datetime.now(timezone.utc),
-        nullable=False,
-    )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="scopes")
-    expenses: Mapped[List[Expense]] = relationship("Expense", back_populates="scope")
-
-    total_cost = column_property(
-        select(func.sum(Expense.amount))
-        .where(Expense.scope_id == uuid)
-        .correlate_except(Expense)
-        .label("total_cost")
-    )
 
 
 class Project(Base):
@@ -219,33 +189,34 @@ class Project(Base):
         UUID(as_uuid=True), ForeignKey("projects.uuid"), nullable=True
     )
     project_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
     start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    budget: Mapped[BigInteger] = mapped_column(BigInteger, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True), insert_default=utc_now, nullable=False
     )
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=datetime.now(timezone.utc),
-        onupdate=datetime.now(timezone.utc),
+        insert_default=utc_now,
+        onupdate=utc_now,
         nullable=False,
     )
 
     user: Mapped["User"] = relationship("User", back_populates="projects")
-    scopes: Mapped["Scope"] = relationship(
-        "Scope", back_populates="project", cascade="all, delete-orphan"
-    )
     children: Mapped[List["Project"]] = relationship(
         "Project", cascade="all, delete-orphan"
     )
-   
-    total_spent = column_property(
-        select(func.sum(Scope.total_cost))
-        .where(Scope.project_id == uuid)
-        .correlate_except(Scope)
-        .label("total_spent")
-    )
     
+    total_cost = column_property(
+        select(func.sum(Expense.amount))
+        .where(Expense.project_id == uuid)
+        .correlate_except(Expense)
+        .label("total_cost")
+    )
+   
+
     
 
 

@@ -2,7 +2,7 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from src.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from src.util.types import UserPool
-from src.model.models import Project, Scope
+from src.model.models import Project
 from src.database.connect import DBSession
 from src.util.user import get_current_user
 from sqlalchemy import select

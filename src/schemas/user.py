@@ -20,8 +20,7 @@ class UserResponse(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     
-    subscriptions: Optional[List[SubscriptionsAllResponse]] = None
-    
+    #subscriptions: Optional[List[SubscriptionsAllResponse]] = None
 
     class Config:
         from_attributes = True

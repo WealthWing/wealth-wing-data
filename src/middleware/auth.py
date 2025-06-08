@@ -8,10 +8,10 @@ from jwt import (
     PyJWTError,
     decode,
     PyJWKClient,
-
 )
 from src.model.models import User
-#from src.database.connect import SessionLocal, session
+
+# from src.database.connect import SessionLocal, session
 
 JWKS_URL = os.environ.get("COGNITO_JWKS_URL")
 COGNITO_USER_POOL_ID = os.environ.get("COGNITO_USER_POOL_ID")
@@ -57,32 +57,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 audience=CLIENT_ID,
                 issuer=COGNITO_ISSUER,
             )
-             #TODO: Remove create user logic when create user route is ready
+
             user_uuid = payload.get("sub")
             if not user_uuid:
                 return JSONResponse(
                     status_code=400, content={"detail": "Invalid token payload"}
                 )
-#
-            #db: Session = SessionLocal()
-#
-            #user = db.query(User).filter(User.uuid == user_uuid).first()
-        
-            #if not user:
-            #    # User does not exist, create a new user
-            #    new_user = User(
-            #        uuid=user_uuid,
-            #        email=payload.get("email"),
-            #        role="Admin",
-            #        name="Erdoan",
-            #        last_name="Shaziman",
-            #    )
-            #    db.add(new_user)
-            #    db.commit()
-            #    db.refresh(new_user)
-            #    user = new_user
-#
-            request.state.user = payload  # Store user info in request.state if needed
+
+            request.state.user = payload  
         except PyJWTError as e:
             return JSONResponse(
                 status_code=401, content={"detail": "Invalid token", "error": str(e)}

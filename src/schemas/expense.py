@@ -6,7 +6,6 @@ from datetime import datetime
 
 class ExpenseBase(BaseModel):
     category_id: UUID
-    scope_id: Optional[UUID] = None
     title: str
     amount: int
     description: Optional[str] = None

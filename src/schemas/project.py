@@ -31,6 +31,7 @@ class ProjectUpdate(BaseModel):
     project_name: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    parent_id: Optional[UUID] = None
 
     class Config:
         from_attributes = True
