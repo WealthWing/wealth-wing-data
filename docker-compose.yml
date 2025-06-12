@@ -2,11 +2,11 @@ version: '3.8'
 services:
   postgres:
     image: postgres:latest
-    container_name: local_postgres
+    container_name: ww-postgres
     environment:
       POSTGRES_USER: ed
       POSTGRES_PASSWORD: 123123
-      POSTGRES_DB: test_db2
+      POSTGRES_DB: ww-db
     ports:
       - "5434:5432"
     volumes:
