@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from src.model.models import Expense
 from sqlalchemy.orm import Session
 from src.schemas.expense import ExpenseCreate
-
+import hashlib
 from src.database.connect import DBSession
 
 
@@ -20,3 +20,4 @@ async def create_expense_in_db(expense_data: ExpenseCreate, db: DBSession, user_
         raise HTTPException(status_code=500, detail=f"Failed to create expense: {e}")
     
     return expense
+

@@ -13,7 +13,7 @@ from sqlalchemy import (
     Text,
     select,
 )
-from sqlalchemy.ext.hybrid import hybrid_property
+
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, Mapped, mapped_column, column_property
 import enum
@@ -79,7 +79,7 @@ class User(Base):
         nullable=False,
     )
     organization: Mapped[Optional["Organization"]] = relationship(
-        "Organization", back_populates="users", cascade="all, delete-orphan"
+        "Organization", back_populates="users"
     )
     subscriptions = relationship(
         "Subscription", back_populates="user", cascade="all, delete-orphan"
@@ -177,7 +177,9 @@ class Expense(Base):
         UUID(as_uuid=True), ForeignKey("categories.uuid"), nullable=False
     )
 
-    account_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), nullable=True)
+    account_id: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("accounts.uuid"), nullable=True
+    )
     import_job_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("import_jobs.uuid"), nullable=True
     )
@@ -203,7 +205,7 @@ class Expense(Base):
     category: Mapped["Category"] = relationship("Category", back_populates="expenses")
     project: Mapped["Project"] = relationship("Project", back_populates="expenses")
     account = relationship("Account", back_populates="expenses")
-    expenses = relationship("Expense", back_populates="project", cascade="all, delete-orphan")
+   
 
 class Project(Base):
     __tablename__ = "projects"
@@ -237,7 +239,7 @@ class Project(Base):
     children: Mapped[List["Project"]] = relationship(
         "Project", cascade="all, delete-orphan"
     )
-
+    expenses = relationship("Expense", back_populates="project") 
     total_cost = column_property(
         select(func.sum(Expense.amount))
         .where(Expense.project_id == uuid)
@@ -292,7 +294,11 @@ class Account(Base):
 
     user = relationship("User", back_populates="accounts")
     expenses = relationship("Expense", back_populates="account")
-    import_jobs = relationship("ImportJob", back_populates="account")
+    import_jobs = relationship(
+        "ImportJob",
+        back_populates="account",
+        foreign_keys="[ImportJob.account_id]"  
+    )
 
 
 class ImportJobStatus(enum.Enum):
@@ -329,5 +335,9 @@ class ImportJob(Base):
     error_message: Mapped[str] = mapped_column(Text, nullable=True)
 
     user = relationship("User", back_populates="import_jobs")
-    account = relationship("Account", back_populates="import_jobs")
+    account = relationship(
+        "Account",
+        back_populates="import_jobs",
+        foreign_keys=[account_id]  
+    )
     expenses = relationship("Expense", back_populates="import_job")

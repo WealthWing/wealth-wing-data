@@ -17,14 +17,22 @@ class UserResponse(BaseModel):
     uuid: UUID
     email: str
     role: UserRole
+    organization_id: Optional[UUID] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    
-    #subscriptions: Optional[List[SubscriptionsAllResponse]] = None
 
     class Config:
         from_attributes = True
         
-class UserCreate(BaseModel):
+
+class UserCreateRequest(BaseModel):
     email: str = Field(description="The email of the user")
-    role: UserRole = Field(description="The role of the user")       
+    role: UserRole = Field(description="The role of the user")
+    household_name: Optional[str] = Field(
+        default=None,
+        description="The name of the household/organization this user belongs to"
+    )
+    invite_token: Optional[str] = Field(
+        default=None,
+        description="If present, this user is joining via invite and should be linked to the inviter's organization/household"
+    )  

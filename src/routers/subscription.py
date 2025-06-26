@@ -11,6 +11,7 @@ from src.util.types import UserPool
 from src.database.connect import DBSession
 from typing import List
 from sqlalchemy.orm import joinedload
+from sqlalchemy.future import select
 
 
 subscription_router = APIRouter()
@@ -26,19 +27,16 @@ async def create_subscription(
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
 ):
-
     subscription_dict = subscription_data.model_dump(exclude_unset=False)
     subscription_dict["user_id"] = current_user.sub
     subscription = Subscription(**subscription_dict)
-
     try:
         db.add(subscription)
-        db.commit()
-        db.refresh(subscription)
+        await db.commit()
+        await db.refresh(subscription)
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create store: {e}")
-
     return subscription
 
 
@@ -54,31 +52,26 @@ async def update_subscription(
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
 ):
-
-    subscription_model = (
-        db.query(Subscription)
-        .filter(Subscription.uuid == subscription_id)
-        .filter(Subscription.user_id == current_user.sub)
-        .first()
+    stmt = (
+        select(Subscription)
+        .where(Subscription.uuid == subscription_id)
+        .where(Subscription.user_id == current_user.sub)
     )
-
+    result = await db.execute(stmt)
+    subscription_model = result.scalars().first()
     if not subscription_model:
         raise HTTPException(status_code=404, detail="Subscription not found")
-
     try:
-        # remove unused fields exclude_unset=True
         subscription_dict = subscription_data.model_dump(exclude_unset=True)
-
         for key, value in subscription_dict.items():
             if getattr(subscription_model, key) != value:
                 setattr(subscription_model, key, value)
-
         db.add(subscription_model)
-        db.commit()
-        db.refresh(subscription_model)
+        await db.commit()
+        await db.refresh(subscription_model)
         return subscription_model
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create store: {e}")
 
 
@@ -92,13 +85,11 @@ async def get_user_subscriptions(
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
 ):
-
-    subscriptions = (
-        db.query(Subscription.uuid, Subscription.name, Subscription.amount)
-        .filter(Subscription.user_id == current_user.sub)
-        .all()
+    stmt = select(Subscription.uuid, Subscription.name, Subscription.amount).where(
+        Subscription.user_id == current_user.sub
     )
-
+    result = await db.execute(stmt)
+    subscriptions = result.all()
     return subscriptions
 
 
@@ -113,18 +104,16 @@ async def get_subscription(
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
 ):
-    # load join table joinedload(Subscription.user)
-    subscription = (
-        db.query(Subscription)
+    stmt = (
+        select(Subscription)
         .options(joinedload(Subscription.user))
-        .filter(Subscription.uuid == subscription_id)
-        .filter(Subscription.user_id == current_user.sub)
-        .first()
+        .where(Subscription.uuid == subscription_id)
+        .where(Subscription.user_id == current_user.sub)
     )
-
+    result = await db.execute(stmt)
+    subscription = result.scalars().first()
     if not subscription:
         raise HTTPException(status_code=404, detail="Subscription not found")
-
     return subscription
 
 
@@ -134,25 +123,21 @@ async def delete_subscription(
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
 ):
-
-    subscription = (
-        db.query(Subscription)
-        .filter(Subscription.uuid == subscription_id)
-        .filter(Subscription.user_id == current_user.sub)
-        .first()
+    stmt = (
+        select(Subscription)
+        .where(Subscription.uuid == subscription_id)
+        .where(Subscription.user_id == current_user.sub)
     )
-
+    result = await db.execute(stmt)
+    subscription = result.scalars().first()
     if not subscription:
         raise HTTPException(status_code=404, detail="Subscription not found")
-
     try:
-
-        db.delete(subscription)
-        db.commit()
+        await db.delete(subscription)
+        await db.commit()
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Failed to delete subscription: {e}"
         )
-
     return "Subscription deleted successfully"

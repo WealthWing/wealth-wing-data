@@ -1,5 +1,5 @@
-from typing import Annotated, List
-from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import  List
+from fastapi import APIRouter, Depends, HTTPException
 from src.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from src.util.types import UserPool
 from src.model.models import Project
@@ -7,7 +7,7 @@ from src.database.connect import DBSession
 from src.util.user import get_current_user
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from sqlalchemy import Select, and_, desc, or_
+from sqlalchemy import or_
 
 
 project_router = APIRouter()

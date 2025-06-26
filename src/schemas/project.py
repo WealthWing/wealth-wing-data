@@ -9,7 +9,6 @@ class ProjectBase(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     parent_id: Optional[UUID] = None
-   
 
 
 class ProjectCreate(ProjectBase):
@@ -35,3 +34,5 @@ class ProjectUpdate(BaseModel):
 
     class Config:
         from_attributes = True
+        
+        

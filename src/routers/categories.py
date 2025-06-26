@@ -1,19 +1,16 @@
-from typing import Annotated, List
-from fastapi import APIRouter, Depends, HTTPException
+from typing import List
+from fastapi import APIRouter, HTTPException
 from src.model.models import Category
 from src.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 from src.database.connect import DBSession
-from sqlalchemy.orm import joinedload
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 category_router = APIRouter()
 
 
 # TODO: missing response model
-@category_router.post("/create", status_code=201)
+@category_router.post("/create", status_code=201, response_model=CategoryResponse)
 async def create_category(category_data: CategoryCreate, db: DBSession):
-
     new_category = Category(
         type=category_data.type,
         description=category_data.description,
@@ -21,12 +18,11 @@ async def create_category(category_data: CategoryCreate, db: DBSession):
     )
     try:
         db.add(new_category)
-        db.commit()
-        db.refresh(new_category)
+        await db.commit()
+        await db.refresh(new_category)
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create category: {e}")
-
     return new_category
 
 
@@ -75,7 +71,7 @@ async def update_category(
         await db.commit()
         await db.refresh(category_model)
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update category: {e}")
 
     return category_model

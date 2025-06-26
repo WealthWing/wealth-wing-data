@@ -1,17 +1,16 @@
 import logging
-from fastapi import FastAPI, Request
-from src.model.models import User
+from fastapi import FastAPI, File, UploadFile
 from starlette.middleware.cors import CORSMiddleware
-from src.schemas.user import UserResponse, UserCreate
 from src.middleware.auth import AuthMiddleware
 from src.routers import health_check
 from src.routers.subscription import subscription_router
 from src.routers.user import user_router
 from src.routers.categories import category_router
 from src.routers.expense import expense_router
-
+from src.routers.account import account_router
 from src.routers.project import project_router
 from src.routers.downloads import downloads_router
+from src.routers.import_file import import_router
 
 
 logging.basicConfig(level=logging.INFO)
@@ -27,15 +26,20 @@ app.include_router(category_router, prefix="/category", tags=["category"])
 app.include_router(expense_router, prefix="/expense", tags=["expense"])
 app.include_router(project_router, prefix="/project", tags=["project"])
 app.include_router(downloads_router, prefix="/download", tags=["download"])
+app.include_router(account_router, prefix="/account", tags=["account"])
+app.include_router(import_router, prefix="/import", tags=["import"])
 
 # Add middleware
 app.add_middleware(AuthMiddleware)
 
-
-
 # Add cores
 
-origins = ["https://localhost:3000", "http://localhost:3000","https://localhost:3001", "http://localhost:3001"]
+origins = [
+    "https://localhost:3000",
+    "http://localhost:3000",
+    "https://localhost:3001",
+    "http://localhost:3001",
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,8 +48,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-#@app.get("/users", response_model=List[UserResponse])
-#def get_tests(db: session):
-#    tests = db.query(User).all()
-#    return tests
