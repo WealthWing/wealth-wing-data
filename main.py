@@ -6,7 +6,7 @@ from src.routers import health_check
 from src.routers.subscription import subscription_router
 from src.routers.user import user_router
 from src.routers.categories import category_router
-from src.routers.expense import expense_router
+from src.routers.transaction import transaction_router
 from src.routers.account import account_router
 from src.routers.project import project_router
 from src.routers.downloads import downloads_router
@@ -23,7 +23,7 @@ app.include_router(health_check.router, prefix="/health", tags=["health"])
 app.include_router(subscription_router, prefix="/subscription", tags=["subscription"])
 app.include_router(user_router, prefix="/user", tags=["user"])
 app.include_router(category_router, prefix="/category", tags=["category"])
-app.include_router(expense_router, prefix="/expense", tags=["expense"])
+app.include_router(transaction_router, prefix="/transaction", tags=["transaction"])
 app.include_router(project_router, prefix="/project", tags=["project"])
 app.include_router(downloads_router, prefix="/download", tags=["download"])
 app.include_router(account_router, prefix="/account", tags=["account"])

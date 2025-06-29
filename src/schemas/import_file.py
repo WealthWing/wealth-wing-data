@@ -6,6 +6,8 @@ from uuid import UUID
 class ImportFileBase(BaseModel):
     account_id: UUID
     file_name: str
+    file_type: str
+    file_size: int
     
     
 class ImportFileCreate(ImportFileBase):
@@ -15,9 +17,16 @@ class ImportFileCreate(ImportFileBase):
 class ImportFileResponse(ImportFileBase):
     """Schema for the response of an import file."""
     uuid: UUID
-    created_at: datetime
-    updated_at: datetime
+    file_url: Optional[str] = None
+    file_type: str
+    file_size: int
+    status: str  
+    uploaded_at: datetime
 
     class Config:
         from_attributes = True
-        orm_mode = True     
+        orm_mode = True
+        
+class ImportCompleteRequest(BaseModel):
+    import_job_id: UUID
+            

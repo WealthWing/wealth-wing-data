@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 
-class ExpenseBase(BaseModel):
+class TransactionBase(BaseModel):
     category_id: UUID
     title: str
     amount: int
@@ -12,16 +12,16 @@ class ExpenseBase(BaseModel):
     date: Optional[datetime] = None
     currency: Optional[str] = None
     
-class ExpenseCreate(ExpenseBase):
+class TransactionCreate(TransactionBase):
     pass
 
-class ExpenseResponse(ExpenseBase):
+class TransactionResponse(TransactionBase):
     uuid: UUID
     user_id: UUID
     class Config:
         from_attributes = True
 
-class ExpenseUpdate(BaseModel):
+class TransactionUpdate(BaseModel):
     category_id: Optional[UUID] = None
     title: Optional[str] = None
     description: Optional[str] = None

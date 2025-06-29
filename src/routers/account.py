@@ -45,13 +45,15 @@ async def get_accounts(
     db: DBSession, current_user: UserPool = Depends(get_current_user)
 ):
     try:
-      
         stmt = (
-            select(Account).join(User, isouter=True).where(User.organization_id == current_user.organization_id)
-            
+            select(Account)
+            .join(User, Account.user_id == current_user.sub)
+            .where(User.organization_id == current_user.organization_id)
         )
+        
         result = await db.execute(stmt)
         accounts = result.scalars().all()
+        
 
         return accounts or []
     except Exception as e:
