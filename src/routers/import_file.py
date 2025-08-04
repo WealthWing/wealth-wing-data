@@ -1,3 +1,4 @@
+import hashlib
 from src.model.models import User, ImportJob, ImportJobStatus
 from sqlalchemy import select
 from fastapi import APIRouter, Depends, File, HTTPException
@@ -10,9 +11,20 @@ from src.schemas.import_file import (
 from src.util.types import UserPool
 from src.util.user import get_current_user
 from src.util.s3 import S3Client, get_s3_client
+from src.model.models import Transaction
 import csv
-import boto3
 import io
+from src.util.import_file import update_import_job_status
+from src.util.category import get_category_id_from_row
+from src.util.transaction import (
+    get_amount_cents,
+    get_internal_type,
+    get_date_from_row,
+    generate_fingerprint,
+    clean_description,
+)
+from src.util.project import get_project_id_from_row
+from src.services.import_manager import get_importer
 
 
 import_router = APIRouter()
@@ -75,19 +87,45 @@ async def import_complete(
     )
     result = await db.execute(job)
     import_job = result.scalar_one_or_none()
-
-    if not import_job or import_job.status != ImportJobStatus.PENDING:
+    if not import_job:
         raise HTTPException(400, "Invalid import job")
 
     key = "Chase6791_Activity_20250415.CSV"
     try:
+        await update_import_job_status(
+            import_job=import_job,
+            new_status=ImportJobStatus.PENDING,
+            db=db,
+        )
         file_content = s3_client.get_s3_file(key=key)
-        csv_reader = csv.DictReader(io.StringIO(file_content))
 
-        for row in csv_reader:
-            print(row)
+        if not file_content:
+            raise HTTPException(status_code=404, detail="File not found in S3")
+
+        importer = get_importer(
+            file_content=file_content,
+            file_name=import_job.file_name,
+            file_type=import_job.file_type,
+            db=db,
+            s3_client=s3_client,
+            current_user=current_user,
+        )
+        parsed_transactions = await importer.parse_csv_transactions(import_job)
+        # If all are new, unique_transactions will equal all transactions; if some dups, only new ones are imported
+        db.add_all(parsed_transactions)
+        await db.commit()
+
+        await update_import_job_status(
+            import_job=import_job,
+            new_status=ImportJobStatus.COMPLETED,
+            db=db,
+        )
+
+        return {
+            "status": "success",
+            "transactions_imported": len(parsed_transactions),
+            "import_job": str(import_job.uuid),
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read CSV file: {e}")
-
-    return {"message": "Import job completed successfully", "status": "success"}

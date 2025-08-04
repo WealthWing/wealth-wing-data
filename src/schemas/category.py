@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class CategoryBase(BaseModel):
     title: str
     type: str
-    description: str
+    description: Optional[str] = None
 
 class CategoryCreate(CategoryBase):
     pass

@@ -142,6 +142,9 @@ class Category(Base):
     uuid: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True
     )
+    organization_id: Mapped[Optional[UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.uuid"), nullable=True
+    )
     title: Mapped[str] = mapped_column(String(100), nullable=False)
     type: Mapped[str] = mapped_column(String(64), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -188,8 +191,9 @@ class Transaction(Base):
     currency: Mapped[str] = mapped_column(String(10), default="USD")
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     title: Mapped[str] = mapped_column(String, nullable=False)
+    type: Mapped[str] = mapped_column(String(64), nullable=False) # e.g., "expense", "income", "transfer", "refund"
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    fingerprint = Column(String(32), nullable=False)
+    fingerprint = Column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), insert_default=utc_now, nullable=False
     )
@@ -269,7 +273,7 @@ class Account(Base):
     )
     account_name: Mapped[str] = mapped_column(
         String(100), nullable=False
-    )  # e.g., "Visa Platinum", "Chase Checking"
+    )  
     account_type: Mapped[AccountTypeEnum] = mapped_column(
         Enum(AccountTypeEnum, name="account_type"), nullable=False
     )
