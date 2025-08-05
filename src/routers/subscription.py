@@ -52,10 +52,8 @@ async def update_subscription(
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
 ):
-    stmt = (
-        select(Subscription)
-        .where(Subscription.uuid == subscription_id)
-        .where(Subscription.user_id == current_user.sub)
+    stmt = select(Subscription).where(
+        Subscription.uuid == subscription_id, Subscription.user_id == current_user.sub
     )
     result = await db.execute(stmt)
     subscription_model = result.scalars().first()

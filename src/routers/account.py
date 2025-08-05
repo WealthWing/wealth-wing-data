@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
-from src.schemas.account import AccountCreate, AccountResponse
+from src.schemas.account import AccountCreate, AccountResponse, AccountUpdate
 from src.model.models import Account, User
 from src.database.connect import DBSession
 from src.util.user import get_current_user
@@ -10,7 +10,7 @@ from src.util.types import UserPool
 account_router = APIRouter()
 
 
-@account_router.post("/create", status_code=201)
+@account_router.post("/create", status_code=201, response_model=AccountResponse)
 async def create_account(
     account_data: AccountCreate,
     db: DBSession,
@@ -24,16 +24,7 @@ async def create_account(
         await db.commit()
         await db.refresh(new_account)
 
-        return AccountResponse(
-            account_name=new_account.account_name,
-            institution=new_account.institution,
-            last_four=new_account.last_four,
-            account_type=new_account.account_type,
-            created_at=new_account.created_at,
-            updated_at=new_account.updated_at,
-            uuid=new_account.uuid,
-            user_id=new_account.user_id,
-        )
+        return account
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create account: {e}")
@@ -59,3 +50,75 @@ async def get_accounts(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve accounts: {e}")
 
+
+@account_router.get("/{account_id}", response_model=AccountResponse)
+async def get_account(
+    account_id: str,
+    db: DBSession,
+    current_user: UserPool = Depends(get_current_user),
+):
+    try:
+        stmt = (
+            select(Account)
+            .filter(Account.uuid == account_id, Account.user_id == current_user.sub)
+            .options(joinedload(Account.transactions))
+        )
+        
+        result = await db.execute(stmt)
+        account = result.scalars().first()
+
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        return account
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve account: {e}")
+    
+
+@account_router.put("/{account_id}", response_model=AccountResponse)
+async def update_account(
+    account_id: str,
+    account_data: AccountUpdate,
+    db: DBSession,
+    current_user: UserPool = Depends(get_current_user),
+):
+    try:
+        stmt = select(Account).where(Account.uuid == account_id, Account.user_id == current_user.sub)
+        result = await db.execute(stmt)
+        account = result.scalars().first()
+
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        for key, value in account_data.model_dump(exclude_unset=True).items():
+            if getattr(account, key) != value:
+                setattr(account, key, value)
+                
+        db.add(account)
+        await db.commit()
+        await db.refresh(account)
+
+        return account
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to update account: {e}")    
+    
+@account_router.delete("/{account_id}", status_code=204)
+async def delete_account(
+    account_id: str,
+    db: DBSession,
+    current_user: UserPool = Depends(get_current_user),
+):
+    try:
+        stmt = select(Account).where(Account.uuid == account_id, Account.user_id == current_user.sub)
+        result = await db.execute(stmt)
+        account = result.scalars().first()
+
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        await db.delete(account)
+        await db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete account: {e}")    
