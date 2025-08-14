@@ -15,12 +15,13 @@ def get_importer(
     file_content,
     file_type: str,
     file_name: str,
+    account_type: str,
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
     s3_client: S3Client = Depends(get_s3_client),
     metadata=None,
 ):
     for importer_cls in IMPORTERS:
-        if importer_cls.can_handle_file(file_name=file_name, file_type=file_type, metadata=metadata):
+        if importer_cls.can_handle_file(file_name=file_name, file_type=file_type, account_type=account_type):
             return importer_cls(file_content=file_content, db=db, s3_client=s3_client, current_user=current_user)
     raise ValueError("No suitable importer found for this file.")

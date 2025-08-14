@@ -13,7 +13,10 @@ from src.routers.downloads import downloads_router
 from src.routers.import_file import import_router
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
 
 app = FastAPI()
 

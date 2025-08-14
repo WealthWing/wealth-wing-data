@@ -322,6 +322,7 @@ class ImportJob(Base):
     )
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     file_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    file_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     file_type: Mapped[str] = mapped_column(String(32), nullable=False)
     file_size: Mapped[int] = mapped_column(Integer) 
     status: Mapped[ImportJobStatus] = mapped_column(

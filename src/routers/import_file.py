@@ -1,7 +1,9 @@
-import hashlib
-from src.model.models import User, ImportJob, ImportJobStatus
+import os
+from src.model.param_models import ImportParams
+from src.model.models import ImportJob, ImportJobStatus, User
 from sqlalchemy import select
-from fastapi import APIRouter, Depends, File, HTTPException
+from sqlalchemy.orm import joinedload
+from fastapi import APIRouter, Depends, HTTPException
 from src.database.connect import DBSession
 from src.schemas.import_file import (
     ImportFileCreate,
@@ -11,22 +13,15 @@ from src.schemas.import_file import (
 from src.util.types import UserPool
 from src.util.user import get_current_user
 from src.util.s3 import S3Client, get_s3_client
-from src.model.models import Transaction
-import csv
-import io
-from src.util.import_file import update_import_job_status
-from src.util.category import get_category_id_from_row
-from src.util.transaction import (
-    get_amount_cents,
-    get_internal_type,
-    get_date_from_row,
-    generate_fingerprint,
-    clean_description,
-)
-from src.util.project import get_project_id_from_row
+from src.services.params import ParamsService
+import logging
+from src.util.import_file import fail_import_job, update_import_job_status
+
 from src.services.import_manager import get_importer
 
+BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
 
+logger = logging.getLogger(__name__)
 import_router = APIRouter()
 
 
@@ -53,19 +48,24 @@ async def create_import_job(
     await db.commit()
     await db.refresh(import_job)
 
-    s3_key = f"{current_user.sub}/{import_job.uuid}"
+    s3_key = f"{current_user.sub}/{import_job.uuid}/{import_data.file_name.replace(' ', '_')}"
+    s3_uri = f"s3://{BUCKET_NAME}/{s3_key}"
     # Generate a presigned URL for the user to upload the file
     presigned_url = s3_client.generate_presigned_url(
-        key=s3_key, content_type=import_data.file_type
+        key=s3_key, content_type="text/csv"
     )
-    setattr(import_job, "file_url", presigned_url)
+    setattr(import_job, "file_url", s3_uri)
+    setattr(import_job, "status", ImportJobStatus.PROCESSING)
+    setattr(import_job, "file_key", s3_key)
+
     db.add(import_job)
     await db.commit()
     await db.refresh(import_job)
 
     return ImportFileResponse(
         uuid=import_job.uuid,
-        file_url=import_job.file_url,
+        # Return the presigned URL for the user to upload the file
+        file_url=presigned_url,
         file_type=import_job.file_type,
         file_size=import_job.file_size,
         file_name=import_job.file_name,
@@ -75,29 +75,25 @@ async def create_import_job(
     )
 
 
-@import_router.post("/complete", status_code=200)
+@import_router.post("/complete", status_code=200, response_model=ImportFileResponse)
 async def import_complete(
     import_data: ImportCompleteRequest,
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
     s3_client: S3Client = Depends(get_s3_client),
 ):
-    job = select(ImportJob).filter_by(
-        uuid=import_data.import_job_id, user_id=current_user.sub
+    stmt = (
+        select(ImportJob)
+        .filter_by(uuid=import_data.import_job_id, user_id=current_user.sub)
+        .options(joinedload(ImportJob.account))
     )
-    result = await db.execute(job)
+    result = await db.execute(stmt)
     import_job = result.scalar_one_or_none()
     if not import_job:
         raise HTTPException(400, "Invalid import job")
 
-    key = "Chase6791_Activity_20250415.CSV"
     try:
-        await update_import_job_status(
-            import_job=import_job,
-            new_status=ImportJobStatus.PENDING,
-            db=db,
-        )
-        file_content = s3_client.get_s3_file(key=key)
+        file_content = s3_client.get_s3_file(key=import_job.file_key)
 
         if not file_content:
             raise HTTPException(status_code=404, detail="File not found in S3")
@@ -106,6 +102,7 @@ async def import_complete(
             file_content=file_content,
             file_name=import_job.file_name,
             file_type=import_job.file_type,
+            account_type=import_job.account.type,
             db=db,
             s3_client=s3_client,
             current_user=current_user,
@@ -121,11 +118,42 @@ async def import_complete(
             db=db,
         )
 
-        return {
-            "status": "success",
-            "transactions_imported": len(parsed_transactions),
-            "import_job": str(import_job.uuid),
-        }
+        return ImportFileResponse.model_validate(import_job)
 
     except Exception as e:
+        logger.error(f"Error processing import job {import_job.uuid}: {e}")
+        await fail_import_job(
+            db=db,
+            import_job=import_job,
+            error_message=str(e),
+        )
         raise HTTPException(status_code=500, detail=f"Failed to read CSV file: {e}")
+
+
+@import_router.get("/imports", status_code=200, response_model=list[ImportFileResponse])
+async def get_imports(
+    db: DBSession,
+    params: ImportParams = Depends(),
+    current_user: UserPool = Depends(get_current_user),
+    params_service: ParamsService = Depends(ParamsService),
+):
+    try:
+        q = select(ImportJob).where(
+            ImportJob.user_id.in_(
+                select(User.uuid).where(
+                    User.organization_id == current_user.organization_id
+                )
+            )
+        )
+        q = params_service.process_query(
+            stmt=q,
+            params=params,
+            model=ImportJob,
+            search_fields=["file_name"],
+        )
+        result = await db.execute(q)
+        imports = result.scalars().all()
+        return imports
+    except Exception as e:
+        logger.error(f"Error retrieving imports for user {current_user.sub}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve imports: {e}")

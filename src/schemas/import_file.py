@@ -22,6 +22,7 @@ class ImportFileResponse(ImportFileBase):
     file_size: int
     status: str  
     uploaded_at: datetime
+    error_message: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -29,4 +30,7 @@ class ImportFileResponse(ImportFileBase):
         
 class ImportCompleteRequest(BaseModel):
     import_job_id: UUID
+    
+    
+    
             

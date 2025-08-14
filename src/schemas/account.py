@@ -35,4 +35,13 @@ class AccountResponse(AccountBase):
 
     class Config:
         from_attributes = True
-        orm_mode = True  # Enable ORM mode to read data from ORM models                
+        orm_mode = True             
+        
+class AccountOptionResponse(BaseModel):
+    """Schema for account options response."""
+    value: UUID = Field(..., description="Unique identifier for the account")
+    label: str = Field(..., description="Name of the account (e.g., My Checking Account, Visa Platinum Card)")
+
+    class Config:
+        from_attributes = True
+        orm_mode = True     
