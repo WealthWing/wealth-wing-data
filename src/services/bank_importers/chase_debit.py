@@ -33,7 +33,7 @@ class ChaseDebitImporter(BaseBankImporter):
             amount_str = row.get("Amount", "0").strip()
             amount_cents = get_amount_cents(amount_str)
             date = get_date_from_row(row)
-            title = clean_description(row.get("Description"))[:32]
+            title = clean_description(row.get("Description"))
             fingerprint = generate_fingerprint(
                 date=date, title=title, amount_cents=amount_cents
             )

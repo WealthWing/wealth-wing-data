@@ -1,4 +1,4 @@
-from typing import  List
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from src.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from src.util.types import UserPool

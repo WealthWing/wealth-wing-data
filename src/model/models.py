@@ -87,7 +87,9 @@ class User(Base):
     import_jobs = relationship(
         "ImportJob", back_populates="user", cascade="all, delete-orphan"
     )
-    accounts = relationship("Account", back_populates="user", cascade="all, delete-orphan")
+    accounts = relationship(
+        "Account", back_populates="user", cascade="all, delete-orphan"
+    )
     transactions = relationship("Transaction", back_populates="user")
     projects = relationship("Project", back_populates="user")
 
@@ -191,7 +193,9 @@ class Transaction(Base):
     currency: Mapped[str] = mapped_column(String(10), default="USD")
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     title: Mapped[str] = mapped_column(String, nullable=False)
-    type: Mapped[str] = mapped_column(String(64), nullable=False) # e.g., "expense", "income", "transfer", "refund"
+    type: Mapped[str] = mapped_column(
+        String(64), nullable=False
+    )  # e.g., "expense", "income", "transfer", "refund"
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     fingerprint = Column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -206,10 +210,12 @@ class Transaction(Base):
 
     import_job = relationship("ImportJob", back_populates="transactions")
     user: Mapped["User"] = relationship("User", back_populates="transactions")
-    category: Mapped["Category"] = relationship("Category", back_populates="transactions")
+    category: Mapped["Category"] = relationship(
+        "Category", back_populates="transactions"
+    )
     project: Mapped["Project"] = relationship("Project", back_populates="transactions")
     account = relationship("Account", back_populates="transactions")
-   
+
 
 class Project(Base):
     __tablename__ = "projects"
@@ -243,7 +249,7 @@ class Project(Base):
     children: Mapped[List["Project"]] = relationship(
         "Project", cascade="all, delete-orphan"
     )
-    transactions = relationship("Transaction", back_populates="project") 
+    transactions = relationship("Transaction", back_populates="project")
     total_cost = column_property(
         select(func.sum(Transaction.amount))
         .where(Transaction.project_id == uuid)
@@ -271,9 +277,7 @@ class Account(Base):
     user_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("user_table.uuid"), nullable=False
     )
-    account_name: Mapped[str] = mapped_column(
-        String(100), nullable=False
-    )  
+    account_name: Mapped[str] = mapped_column(String(100), nullable=False)
     account_type: Mapped[AccountTypeEnum] = mapped_column(
         Enum(AccountTypeEnum, name="account_type"), nullable=False
     )
@@ -295,10 +299,7 @@ class Account(Base):
 
     user = relationship("User", back_populates="accounts")
     transactions = relationship("Transaction", back_populates="account")
-    import_jobs = relationship(
-        "ImportJob",
-        back_populates="account"
-    )
+    import_jobs = relationship("ImportJob", back_populates="account")
 
 
 class ImportJobStatus(enum.Enum):
@@ -324,7 +325,7 @@ class ImportJob(Base):
     file_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     file_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     file_type: Mapped[str] = mapped_column(String(32), nullable=False)
-    file_size: Mapped[int] = mapped_column(Integer) 
+    file_size: Mapped[int] = mapped_column(Integer)
     status: Mapped[ImportJobStatus] = mapped_column(
         Enum(ImportJobStatus, name="import_job_status"),
         nullable=False,
@@ -340,8 +341,6 @@ class ImportJob(Base):
 
     user = relationship("User", back_populates="import_jobs")
     account = relationship(
-        "Account",
-        back_populates="import_jobs",
-        foreign_keys=[account_id]  
+        "Account", back_populates="import_jobs", foreign_keys=[account_id]
     )
     transactions = relationship("Transaction", back_populates="import_job")

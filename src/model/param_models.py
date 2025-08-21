@@ -52,13 +52,20 @@ class StandardParams(BaseModel):
         Annotated[List[FilterByInputs], BeforeValidator(ensure_list)]
     ] = []
 
-    
+
 class ImportParams(StandardParams):
-    sort_by: Optional[
-        Literal["file_name", "status", "uploaded_at"]
-    ] = None
+    sort_by: Optional[Literal["file_name", "status", "uploaded_at"]] = None
     page: int = Field(1, ge=1)
     page_size: int = Field(500, ge=1)
-    
-        
-    
+
+
+class TransactionsParams(StandardParams):
+    sort_by: Optional[Literal["amount", "date", "title", "category"]] = None
+    page: int = Field(1, ge=1)
+    page_size: int = Field(500, ge=1)
+
+    @field_validator("from_date", "to_date")
+    def validate_dates(cls, value: Optional[datetime]) -> Optional[datetime]:
+        if value and value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value

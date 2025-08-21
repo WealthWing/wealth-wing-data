@@ -111,11 +111,12 @@ class ParamsService:
         model,
         params: StandardParams,
         search_fields: List[str] = None,
+        date_field: str = "created_at",
     ) -> Select:
 
         if params.from_date or params.to_date:
             stmt = self.apply_date_filter(
-                stmt, model, params.from_date, params.to_date, "created_at"
+                stmt, model, params.from_date, params.to_date, date_field
             )
 
         if params.filter_by_inputs:

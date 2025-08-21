@@ -85,3 +85,4 @@ def clean_description(description: str) -> str:
     cleaned = re.sub(r"\s+", " ", cleaned)
     cleaned = " ".join(cleaned.split()[:5])
     return cleaned.title()
+

@@ -8,6 +8,7 @@ from src.database.connect import DBSession
 from src.schemas.import_file import (
     ImportFileCreate,
     ImportFileResponse,
+    ImportFileListItem,
     ImportCompleteRequest,
 )
 from src.util.types import UserPool
@@ -16,8 +17,8 @@ from src.util.s3 import S3Client, get_s3_client
 from src.services.params import ParamsService
 import logging
 from src.util.import_file import fail_import_job, update_import_job_status
-
 from src.services.import_manager import get_importer
+from src.services.query_service import get_query_service, QueryService
 
 BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
 
@@ -130,30 +131,41 @@ async def import_complete(
         raise HTTPException(status_code=500, detail=f"Failed to read CSV file: {e}")
 
 
-@import_router.get("/imports", status_code=200, response_model=list[ImportFileResponse])
+@import_router.get("/imports", status_code=200, response_model=list[ImportFileListItem])
 async def get_imports(
     db: DBSession,
     params: ImportParams = Depends(),
     current_user: UserPool = Depends(get_current_user),
     params_service: ParamsService = Depends(ParamsService),
+    query_service: QueryService = Depends(get_query_service),
 ):
     try:
-        q = select(ImportJob).where(
-            ImportJob.user_id.in_(
-                select(User.uuid).where(
-                    User.organization_id == current_user.organization_id
-                )
-            )
+        stmt = query_service.org_filtered_query(
+            account_attr="account",
+            current_user=current_user,
+            model=ImportJob 
         )
-        q = params_service.process_query(
-            stmt=q,
+        stmt = params_service.process_query(
+            stmt=stmt,
             params=params,
             model=ImportJob,
             search_fields=["file_name"],
         )
-        result = await db.execute(q)
+        result = await db.execute(stmt)
         imports = result.scalars().all()
-        return imports
+        return [
+            ImportFileListItem(
+                account_id=im.account.uuid,
+                account_name=im.account.account_name,
+                institution=im.account.institution,
+                uuid=im.uuid,
+                file_name=im.file_name,
+                status=im.status,
+                uploaded_at=im.uploaded_at,
+                error_message=im.error_message,
+            )
+            for im in imports
+        ]
     except Exception as e:
         logger.error(f"Error retrieving imports for user {current_user.sub}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve imports: {e}")
