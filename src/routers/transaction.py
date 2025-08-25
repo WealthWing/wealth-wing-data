@@ -57,9 +57,7 @@ async def get_transactions(
 
     countable = filtered_stmt.limit(None).offset(None).order_by(None)
     count_subq = countable.with_only_columns(Transaction.uuid).subquery()
-    total = (
-        await db.execute(select(func.count()).select_from(count_subq))
-    ).scalar_one()
+    total = len(result)
 
     page = getattr(params, "page", None)
     page_size = getattr(params, "page_size", None)

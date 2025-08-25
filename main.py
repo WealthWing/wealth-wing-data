@@ -14,8 +14,7 @@ from src.routers.import_file import import_router
 
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 
 app = FastAPI()
@@ -35,8 +34,8 @@ app.include_router(import_router, prefix="/import", tags=["import"])
 # Add middleware
 app.add_middleware(AuthMiddleware)
 
-# Add cores
 
+# Add CORS
 origins = [
     "https://localhost:3000",
     "http://localhost:3000",

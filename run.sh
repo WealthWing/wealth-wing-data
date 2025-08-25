@@ -1,4 +1,4 @@
 #!/bin/bash
 
 echo "Running in dev mode"
-uvicorn main:app --reload
+uvicorn main:app --reload --env-file .env

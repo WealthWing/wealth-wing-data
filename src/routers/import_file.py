@@ -82,34 +82,37 @@ async def import_complete(
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
     s3_client: S3Client = Depends(get_s3_client),
+    query_service: QueryService = Depends(get_query_service)
 ):
-    stmt = (
-        select(ImportJob)
-        .filter_by(uuid=import_data.import_job_id, user_id=current_user.sub)
-        .options(joinedload(ImportJob.account))
-    )
-    result = await db.execute(stmt)
+    base_stmt = query_service.org_filtered_query(
+        model=ImportJob,
+        account_attr="account",
+        current_user=current_user,
+    ).filter_by(uuid=import_data.import_job_id)
+
+    result = await db.execute(base_stmt)
     import_job = result.scalar_one_or_none()
     if not import_job:
+        logger.error(f"Import job not found for id: {import_data.import_job_id}")
         raise HTTPException(400, "Invalid import job")
 
     try:
         file_content = s3_client.get_s3_file(key=import_job.file_key)
 
         if not file_content:
+            logger.error(f"File not found in S3 for key: {import_job.file_key}")
             raise HTTPException(status_code=404, detail="File not found in S3")
-
+        
         importer = get_importer(
             file_content=file_content,
             file_name=import_job.file_name,
             file_type=import_job.file_type,
-            account_type=import_job.account.type,
+            account_type=import_job.account.account_type,
             db=db,
             s3_client=s3_client,
             current_user=current_user,
         )
         parsed_transactions = await importer.parse_csv_transactions(import_job)
-        # If all are new, unique_transactions will equal all transactions; if some dups, only new ones are imported
         db.add_all(parsed_transactions)
         await db.commit()
 
@@ -122,7 +125,7 @@ async def import_complete(
         return ImportFileResponse.model_validate(import_job)
 
     except Exception as e:
-        logger.error(f"Error processing import job {import_job.uuid}: {e}")
+        logger.error(f"Error processing import job {import_job.uuid}: {e}", exc_info=True)
         await fail_import_job(
             db=db,
             import_job=import_job,

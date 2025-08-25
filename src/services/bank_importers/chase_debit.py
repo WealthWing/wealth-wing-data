@@ -77,23 +77,16 @@ class ChaseDebitImporter(BaseBankImporter):
         return unique_transactions
 
 
-@staticmethod
-def can_handle_file(file_name: str, file_type: str, account_type) -> bool:
-    if not file_name or not file_type or not account_type:
-        return False
-
-    allowed_types = {"csv", "text/csv"}
-    file_type_normalized = file_type.strip().lower()
-    if file_type_normalized not in allowed_types:
-        return False
-
-    if not re.search(r"\bchase\b", file_name.lower()):
-        return False
-
-    if isinstance(account_type, str):
-        try:
-            account_type = AccountTypeEnum(account_type)
-        except ValueError:
+    @staticmethod
+    def can_handle_file(file_name: str, file_type: str, account_type: AccountTypeEnum) -> bool:
+        if not file_name or not file_type or not account_type:
+            return False
+        allowed_types = {"csv", "text/csv"}
+        file_type_normalized = file_type.strip().lower()
+        if file_type_normalized not in allowed_types:
             return False
 
-    return account_type == AccountTypeEnum.CHECKING
+        if account_type != AccountTypeEnum.CHECKING:
+            return False
+
+        return account_type == AccountTypeEnum.CHECKING

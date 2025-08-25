@@ -1,4 +1,4 @@
-from src.model.models import ImportJob
+from src.model.models import ImportJob, ImportJobStatus
 from src.database.connect import DBSession
 from src.util.s3 import S3Client
 from src.util.types import UserPool
@@ -15,6 +15,6 @@ class BaseBankImporter:
         raise NotImplementedError
 
     @staticmethod
-    def can_handle_file(self, file_name: str, file_type: str, metadata=None) -> bool:
+    def can_handle_file(file_name: str, file_type: str, account_type: ImportJobStatus, metadata=None) -> bool:
         """Optional: Used for format detection/auto-selection."""
         return False

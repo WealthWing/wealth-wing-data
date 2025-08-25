@@ -15,7 +15,7 @@ async def get_category_id_from_row(
             or_(Transaction.user.has(organization_id=organization_id)),
         )
     )
-    transaction = transaction_result.scalar_one_or_none()
+    transaction = transaction_result.scalars().first()
     if transaction:
         return transaction.category_id
 

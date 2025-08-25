@@ -15,7 +15,7 @@ async def get_users(db: DBSession):
     stmt = select(User)
     result = await db.execute(stmt)
     users = result.scalars().all()
-    
+
     if not users:
         return []
     return users
@@ -34,14 +34,20 @@ async def create_project(
                 message="Invite token is not supported in this version."
             )
         elif user_data.invite_token is None:
-            household_name = user_data.household_name if user_data.household_name else f"{user_data.email} Household"
+            household_name = (
+                user_data.household_name
+                if user_data.household_name
+                else f"{user_data.email} Household"
+            )
             new_org = Organization(name=household_name)
             db.add(new_org)
-            await db.commit()  
+            await db.commit()
             await db.refresh(new_org)
             organization_id = new_org.uuid
 
-        user = user_data.model_dump(exclude={"invite_token", "household_name"}, exclude_unset=True)
+        user = user_data.model_dump(
+            exclude={"invite_token", "household_name"}, exclude_unset=True
+        )
         add_user = User(uuid=current_user.sub, organization_id=organization_id, **user)
 
         db.add(add_user)
@@ -55,3 +61,14 @@ async def create_project(
             await db.delete(new_org)
             await db.commit()
         raise Exception(f"error message: {str(e)}")
+
+
+@user_router.get("/me", response_model=UserResponse)
+async def get_user(db: DBSession, current_user: UserPool = Depends(get_current_user)):
+    stmt = select(User).where(User.uuid == current_user.sub)
+    result = await db.execute(stmt)
+    user = result.scalars().first()
+
+    if not user:
+        return UserResponse(message="User not found")
+    return user
