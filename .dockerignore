@@ -1,0 +1,17 @@
+.git
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.*
+node_modules/
+dist/
+build/
+.vscode/
+.mypy_cache/
+.pytest_cache/
+coverage/
+.gitignore
+Dockerfile
+docker-compose*.yml

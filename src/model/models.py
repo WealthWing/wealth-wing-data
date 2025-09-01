@@ -48,6 +48,18 @@ class Organization(Base):
 
 
 class UserRole(enum.Enum):
+    """
+    Enumeration of user roles within the system, sorted by importance.
+
+    Attributes:
+        SuperAdmin: Represents a user with the highest level of administrative privileges.
+        Admin: Represents a user with administrative privileges.
+        User_Admin: Represents a user with administrative privileges specific to user management.
+        User_Manager: Represents a user with permissions to manage other users.
+        User_Editor: Represents a user with permissions to edit content.
+        User_Viewer: Represents a user with read-only access.
+        User: Represents a standard user with basic access.
+    """
     SuperAdmin = "SuperAdmin"
     Admin = "Admin"
     User = "User"

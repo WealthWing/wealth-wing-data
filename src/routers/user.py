@@ -1,3 +1,4 @@
+from ast import Or
 from fastapi import APIRouter, Depends
 from src.schemas.user import UserResponse, UserCreateRequest
 from src.model.models import User, Organization

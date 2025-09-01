@@ -46,6 +46,7 @@ async def get_transactions(
         stmt=base_stmt,
         params=params,
         model=Transaction,
+        date_field="date",
         search_fields=["title", "type"],
     )
 
@@ -57,7 +58,7 @@ async def get_transactions(
 
     countable = filtered_stmt.limit(None).offset(None).order_by(None)
     count_subq = countable.with_only_columns(Transaction.uuid).subquery()
-    total = len(result)
+    total = (await db.execute(select(func.count()).select_from(count_subq))).scalar_one()
 
     page = getattr(params, "page", None)
     page_size = getattr(params, "page_size", None)
@@ -93,7 +94,9 @@ async def get_transactions(
     )
 
 
-@transaction_router.get("/summary", status_code=200, response_model=TransactionSummaryResponse)
+@transaction_router.get(
+    "/summary", status_code=200, response_model=TransactionSummaryResponse
+)
 async def get_transaction_summary(
     db: DBSession,
     params: TransactionsParams = Depends(),
@@ -135,7 +138,7 @@ async def get_transaction_summary(
         date_field="date",
         search_fields=["title", "type"],
     )
-   
+
     subq = (
         filtered_stmt.join(Account, Transaction.account_id == Account.uuid)
         .where(Account.account_type == AccountTypeEnum.CHECKING)
