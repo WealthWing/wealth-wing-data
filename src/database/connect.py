@@ -29,6 +29,8 @@ Base = declarative_base()
 
 class DatabaseSessionManager:
     def __init__(self, url: str, engine_kwargs: dict[str, Any] = {}):
+        if url and url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)        
         self._engine = create_async_engine(url, **engine_kwargs)
         self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
 

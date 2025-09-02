@@ -12,6 +12,9 @@ load_dotenv()
 
 sql_url = os.getenv("DATABASE_URL")
 
+if sql_url and sql_url.startswith("postgres://"):
+    sql_url = sql_url.replace("postgres://", "postgresql+asyncpg://", 1)
+
 if sql_url is None:
     raise ValueError("DATABASE_URL is not set in .env file")
 
