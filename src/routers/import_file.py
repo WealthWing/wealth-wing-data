@@ -82,7 +82,7 @@ async def import_complete(
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
     s3_client: S3Client = Depends(get_s3_client),
-    query_service: QueryService = Depends(get_query_service)
+    query_service: QueryService = Depends(get_query_service),
 ):
     base_stmt = query_service.org_filtered_query(
         model=ImportJob,
@@ -102,7 +102,7 @@ async def import_complete(
         if not file_content:
             logger.error(f"File not found in S3 for key: {import_job.file_key}")
             raise HTTPException(status_code=404, detail="File not found in S3")
-        
+
         importer = get_importer(
             file_content=file_content,
             file_name=import_job.file_name,
@@ -125,7 +125,9 @@ async def import_complete(
         return ImportFileResponse.model_validate(import_job)
 
     except Exception as e:
-        logger.error(f"Error processing import job {import_job.uuid}: {e}", exc_info=True)
+        logger.error(
+            f"Error processing import job {import_job.uuid}: {e}", exc_info=True
+        )
         await fail_import_job(
             db=db,
             import_job=import_job,
@@ -144,9 +146,7 @@ async def get_imports(
 ):
     try:
         stmt = query_service.org_filtered_query(
-            account_attr="account",
-            current_user=current_user,
-            model=ImportJob 
+            account_attr="account", current_user=current_user, model=ImportJob
         )
         stmt = params_service.process_query(
             stmt=stmt,

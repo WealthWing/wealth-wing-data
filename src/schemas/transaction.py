@@ -41,10 +41,10 @@ class TransactionUpdate(BaseModel):
 
 
 class TransactionsAllResponse(BaseModel):
-    transactions: list[TransactionResponse]
-    has_more: bool
-    total_pages: int
-    total_count: int
+    transactions: list[TransactionResponse] = []
+    has_more: bool = False
+    total_pages: int = 0
+    total_count: int = 0
 
     class Config:
         from_attributes = True

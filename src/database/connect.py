@@ -30,10 +30,7 @@ Base = declarative_base()
 
 class DatabaseSessionManager:
     def __init__(self, host: str, engine_kwargs: dict[str, Any] = {}):
-        if "{admin:pass}" in host and secret_arn:
-            db_url = self._update_db_url_with_secret(host, secret_arn)
-        else:
-            db_url = host
+        db_url = self._update_db_url_with_secret(host, secret_arn) if secret_arn else host
         self._engine = create_async_engine(db_url, **engine_kwargs)
         self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
 
