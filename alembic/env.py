@@ -15,11 +15,12 @@ load_dotenv()
 
 sql_url = os.getenv("SQLALCHEMY_DATABASE_URL")
 secret_arn = os.getenv("SECRET_ARN")
+region = os.getenv("AWS_REGION")
 
 if sql_url is None:
     raise ValueError("SQLALCHEMY_DATABASE_URL is not set in .env file")
 
-client = boto3.client("secretsmanager")
+client = boto3.client("secretsmanager", region_name=region)
 response = client.get_secret_value(SecretId=secret_arn)
 secret_data = json.loads(response["SecretString"])
 username = secret_data.get("username")
