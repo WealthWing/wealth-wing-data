@@ -9,7 +9,6 @@ from src.routers.categories import category_router
 from src.routers.transaction import transaction_router
 from src.routers.account import account_router
 from src.routers.project import project_router
-from src.routers.downloads import downloads_router
 from src.routers.import_file import import_router
 
 
@@ -27,7 +26,6 @@ app.include_router(user_router, prefix="/user", tags=["user"])
 app.include_router(category_router, prefix="/category", tags=["category"])
 app.include_router(transaction_router, prefix="/transaction", tags=["transaction"])
 app.include_router(project_router, prefix="/project", tags=["project"])
-app.include_router(downloads_router, prefix="/download", tags=["download"])
 app.include_router(account_router, prefix="/account", tags=["account"])
 app.include_router(import_router, prefix="/import", tags=["import"])
 

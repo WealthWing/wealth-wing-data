@@ -10,7 +10,7 @@ services:
     image: postgres:latest
     container_name: local_postgres
     environment:
-      POSTGRES_USER: ed
+      POSTGRES_USER: admin
       POSTGRES_PASSWORD: 123123
       POSTGRES_DB: test_db2
     ports:
@@ -24,4 +24,4 @@ volumes:
 
 - Run or update Docker services `docker-compose up -d`
 - Verify the container is running `docker ps`
-- Update your database url in your .env file `SQLALCHEMY_DATABASE_URL = postgresql://ed:123123@localhost:5432/test_db2`
+- Update your database url in your .env file `SQLALCHEMY_DATABASE_URL = postgresql://ed:123123@postgres:5432/test_db2`

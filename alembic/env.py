@@ -1,6 +1,6 @@
 from logging.config import fileConfig
 import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import pool
 from alembic import context
 from src.model.models import Base

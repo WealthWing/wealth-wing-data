@@ -18,7 +18,7 @@ async def ping():
 
 
 @router.get("/test_db_connection")
-async def test_db_connection(db: DBSession):
+async def test_db_connection(db: DBSession):    
     try:
         result = await db.execute(text("SELECT NOW()"))
         row = result.first()

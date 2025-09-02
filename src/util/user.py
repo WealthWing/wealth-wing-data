@@ -25,4 +25,7 @@ async def get_current_user(request: Request, db: DBSession) -> UserPool:
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
-    return UserPool(email=user.email, sub=user.uuid, orrganization_id=user.organization_id if user else None)
+    if user:
+        return UserPool(email=user.email, sub=user.uuid, organization_id=user.organization_id)
+
+    return UserPool(email=email, sub=sub, organization_id=None)
