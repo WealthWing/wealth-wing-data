@@ -10,9 +10,6 @@ from jwt import (
 )
 
 
-
-
-
 class AuthMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
@@ -21,7 +18,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
         self.AWS_REGION = os.getenv("AWS_REGION")
         self.COGNITO_ISSUER = os.getenv("COGNITO_ISSUER")
         self.CLIENT_ID = os.getenv("COGNITO_CLIENT_ID")
-
 
     async def dispatch(self, request: Request, call_next) -> Response:
         public_paths = [
@@ -40,13 +36,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         if not token:
             return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
-    
+
         # Remove 'Bearer ' prefix if present
         if token.startswith("Bearer "):
             token = token[7:]
 
         try:
-            print(f"Validating token: {self.CLIENT_ID}", self.COGNITO_ISSUER)
             jwks_client = PyJWKClient(self.JWKS_URL)
             signing_key = jwks_client.get_signing_key_from_jwt(token)
             payload = decode(
