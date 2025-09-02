@@ -23,7 +23,7 @@ logger = getLogger(__name__)
 
 sql_url = os.getenv("SQLALCHEMY_DATABASE_URL")
 secret_arn = os.getenv("SECRET_ARN")
-
+region = os.getenv("AWS_REGION")
 
 
 Base = declarative_base()
@@ -69,7 +69,7 @@ class DatabaseSessionManager:
             await session.close()
     def _update_db_url_with_secret(self, db_url: str, secret_arn: str) -> str:
         try:
-            client = boto3.client("secretsmanager")
+            client = boto3.client("secretsmanager", region_name=region)
 
             response = client.get_secret_value(SecretId=secret_arn)
             secret_data = json.loads(response["SecretString"])
