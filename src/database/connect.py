@@ -21,17 +21,15 @@ import urllib
 load_dotenv()
 logger = getLogger(__name__)
 
-sql_url = os.getenv("SQLALCHEMY_DATABASE_URL")
-secret_arn = os.getenv("SECRET_ARN")
-region = os.getenv("AWS_REGION")
+sql_url = os.getenv("DATABASE_URL")
 
 
 Base = declarative_base()
 
+
 class DatabaseSessionManager:
-    def __init__(self, host: str, engine_kwargs: dict[str, Any] = {}):
-        db_url = self._update_db_url_with_secret(host, secret_arn) if secret_arn else host
-        self._engine = create_async_engine(db_url, **engine_kwargs)
+    def __init__(self, url: str, engine_kwargs: dict[str, Any] = {}):
+        self._engine = create_async_engine(url, **engine_kwargs)
         self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
 
     async def close(self):
@@ -67,26 +65,6 @@ class DatabaseSessionManager:
             raise
         finally:
             await session.close()
-    def _update_db_url_with_secret(self, db_url: str, secret_arn: str) -> str:
-        try:
-            client = boto3.client("secretsmanager", region_name=region)
-
-            response = client.get_secret_value(SecretId=secret_arn)
-            secret_data = json.loads(response["SecretString"])
-            username = secret_data.get("username")
-            password = urllib.parse.quote(secret_data.get("password"))
-            
-            if not username or not password:
-                raise ValueError(
-                    "Secrets Manager response is missing username or password."
-                )
-
-            db_url = db_url.replace("{admin:pass}", f"{username}:{password}")
-            logger.debug("Database URL updated with credentials from Secrets Manager.")
-            return db_url
-        except Exception as e:
-            raise ValueError(f"Failed to update database URL: {e}")
-
 
 
 sessionmanager = DatabaseSessionManager(sql_url, {"echo": True})

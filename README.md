@@ -22,7 +22,7 @@ Async stack with PostgreSQL (`asyncpg`), SQLAlchemy 2.0, Alembic, and Uvicorn. O
 2. **Copy and edit the `.env` file:**
    - Set your secrets and database URL as needed. Example:
      ```env
-     SQLALCHEMY_DATABASE_URL=postgresql+asyncpg://amin:123123@postgres:5432/ww-db
+     DATABASE_URL=postgresql+asyncpg://amin:123123@postgres:5432/ww-db
      ```
 
 3. **Start the backend and database:**
@@ -57,7 +57,7 @@ Async stack with PostgreSQL (`asyncpg`), SQLAlchemy 2.0, Alembic, and Uvicorn. O
    - See [documentation/DOCKER.md](documentation/DOCKER.md) for details.
    - Example connection string for local dev:
      ```env
-     SQLALCHEMY_DATABASE_URL=postgresql+asyncpg://admin:123123@localhost:5434/ww-db
+     DATABASE_URL=postgresql+asyncpg://admin:123123@localhost:5434/ww-db
      ```
 
 4. **Run database migrations:**

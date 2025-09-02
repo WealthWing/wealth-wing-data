@@ -24,4 +24,4 @@ volumes:
 
 - Run or update Docker services `docker-compose up -d`
 - Verify the container is running `docker ps`
-- Update your database url in your .env file `SQLALCHEMY_DATABASE_URL = postgresql://ed:123123@postgres:5432/test_db2`
+- Update your database url in your .env file `DATABASE_URL = postgresql://ed:123123@postgres:5432/test_db2`

@@ -1,36 +1,19 @@
 from logging.config import fileConfig
 import asyncio
-import boto3
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import pool
 from alembic import context
 from src.model.models import Base
 from dotenv import load_dotenv
 import os
-import boto3
-import json
-import urllib
+
 
 load_dotenv()
 
-sql_url = os.getenv("SQLALCHEMY_DATABASE_URL")
-secret_arn = os.getenv("SECRET_ARN")
-region = os.getenv("AWS_REGION")
+sql_url = os.getenv("DATABASE_URL")
 
 if sql_url is None:
-    raise ValueError("SQLALCHEMY_DATABASE_URL is not set in .env file")
-
-client = boto3.client("secretsmanager", region_name=region)
-response = client.get_secret_value(SecretId=secret_arn)
-secret_data = json.loads(response["SecretString"])
-username = secret_data.get("username")
-password = urllib.parse.quote(secret_data.get("password"))
-
-if not username or not password:
-    raise ValueError("Secrets Manager response is missing username or password.")
-
-db_url = sql_url.replace("{admin:pass}", f"{username}:{password}")
-
+    raise ValueError("DATABASE_URL is not set in .env file")
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -41,7 +24,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", db_url)    
+config.set_main_option("sqlalchemy.url", sql_url)    
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
