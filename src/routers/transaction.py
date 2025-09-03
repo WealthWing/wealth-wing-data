@@ -140,7 +140,7 @@ async def get_transaction_summary(
     Raises:
         HTTPException: If authentication fails or database errors occur.
     """
-    if not has_permission(current_user, Perm.WRITE):
+    if not has_permission(current_user, Perm.READ):
         raise HTTPException(403, "User does not have permission to view transactions")
     
     base_stmt = query_service.org_filtered_query(
