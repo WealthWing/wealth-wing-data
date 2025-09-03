@@ -7,6 +7,7 @@ from src.schemas.transaction import (
     TransactionCreate,
     TransactionResponse,
     TransactionSummaryResponse,
+    TransactionTotals,
     TransactionsAllResponse,
 )
 from src.database.connect import DBSession
@@ -54,7 +55,12 @@ async def get_transactions(
     result = transactions.scalars().all()
 
     if not result:
-        return []
+        return TransactionSummaryResponse(
+            totals=TransactionTotals(
+                income=0, expense=0, net=0, average_monthly_spent=0.0
+            ),
+            months=[],
+        )
 
     countable = filtered_stmt.limit(None).offset(None).order_by(None)
     count_subq = countable.with_only_columns(Transaction.uuid).subquery()

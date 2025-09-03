@@ -1,3 +1,5 @@
+import csv
+import io
 import os
 from src.model.param_models import ImportParams
 from src.model.models import ImportJob, ImportJobStatus, User
@@ -84,6 +86,7 @@ async def import_complete(
     s3_client: S3Client = Depends(get_s3_client),
     query_service: QueryService = Depends(get_query_service),
 ):
+
     base_stmt = query_service.org_filtered_query(
         model=ImportJob,
         account_attr="account",
@@ -98,7 +101,6 @@ async def import_complete(
 
     try:
         file_content = s3_client.get_s3_file(key=import_job.file_key)
-
         if not file_content:
             logger.error(f"File not found in S3 for key: {import_job.file_key}")
             raise HTTPException(status_code=404, detail="File not found in S3")
@@ -114,8 +116,8 @@ async def import_complete(
         )
         parsed_transactions = await importer.parse_csv_transactions(import_job)
         db.add_all(parsed_transactions)
+        
         await db.commit()
-
         await update_import_job_status(
             import_job=import_job,
             new_status=ImportJobStatus.COMPLETED,

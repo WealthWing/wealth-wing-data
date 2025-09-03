@@ -23,8 +23,7 @@ class ChaseDebitImporter(BaseBankImporter):
         current_user = self.current_user
         db = self.db
         # Parse the CSV content
-        csv_reader = csv.DictReader(io.StringIO(self.file_content))
-
+        csv_reader = csv.DictReader(io.StringIO(self.file_content))    
         transactions_and_fps = []
         fingerprints = []
         for row in csv_reader:

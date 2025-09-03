@@ -25,7 +25,7 @@ class ImportFileResponse(ImportFileBase):
 
     class Config:
         from_attributes = True
-        orm_mode = True
+       
         
 class ImportCompleteRequest(BaseModel):
     import_job_id: UUID
@@ -43,5 +43,5 @@ class ImportFileListItem(BaseModel):
 
     class Config:
         from_attributes = True
-        orm_mode = True    
+           
     
