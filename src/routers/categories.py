@@ -7,8 +7,8 @@ from sqlalchemy import select
 
 category_router = APIRouter()
 
+# TODO - add permissions and user association to categories
 
-# TODO: missing response model
 @category_router.post("/create", status_code=201, response_model=CategoryResponse)
 async def create_category(category_data: CategoryCreate, db: DBSession):
     new_category = Category(

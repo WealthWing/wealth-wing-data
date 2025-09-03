@@ -1,10 +1,10 @@
-from ast import Or
+from http.client import HTTPException
 from fastapi import APIRouter, Depends
-from src.schemas.user import UserResponse, UserCreateRequest
+from src.schemas.user import Perm, UserResponse, UserCreateRequest
 from src.model.models import User, Organization
 from src.database.connect import DBSession
 from typing import List
-from src.util.user import get_current_user
+from src.util.user import get_current_user, has_permission
 from src.util.types import UserPool
 from sqlalchemy import select
 
@@ -30,6 +30,8 @@ async def create_project(
 ):
     new_org = None
     try:
+        if not has_permission(current_user, Perm.MANAGE_ORG):
+            raise HTTPException(403, "User does not have permission to create organizations")
         if user_data.invite_token:
             return UserResponse(
                 message="Invite token is not supported in this version."
@@ -66,6 +68,9 @@ async def create_project(
 
 @user_router.get("/me", response_model=UserResponse)
 async def get_user(db: DBSession, current_user: UserPool = Depends(get_current_user)):
+    if not has_permission(current_user, Perm.READ):
+        raise HTTPException(403, "User does not have permission to view user information")
+
     stmt = select(User).where(User.uuid == current_user.sub)
     result = await db.execute(stmt)
     user = result.scalars().first()

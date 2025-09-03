@@ -1,10 +1,6 @@
-import csv
-import io
 import os
 from src.model.param_models import ImportParams
-from src.model.models import ImportJob, ImportJobStatus, User
-from sqlalchemy import select
-from sqlalchemy.orm import joinedload
+from src.model.models import ImportJob, ImportJobStatus
 from fastapi import APIRouter, Depends, HTTPException
 from src.database.connect import DBSession
 from src.schemas.import_file import (
@@ -14,13 +10,14 @@ from src.schemas.import_file import (
     ImportCompleteRequest,
 )
 from src.util.types import UserPool
-from src.util.user import get_current_user
+from src.util.user import get_current_user, has_permission
 from src.util.s3 import S3Client, get_s3_client
 from src.services.params import ParamsService
 import logging
 from src.util.import_file import fail_import_job, update_import_job_status
 from src.services.import_manager import get_importer
 from src.services.query_service import get_query_service, QueryService
+from src.schemas.user import Perm
 
 BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
 
@@ -35,6 +32,8 @@ async def create_import_job(
     current_user: UserPool = Depends(get_current_user),
     s3_client: S3Client = Depends(get_s3_client),
 ):
+    if not has_permission(current_user, Perm.WRITE):
+        raise HTTPException(403, "User does not have permission to create import jobs")
 
     # Create a new import job
     import_job = ImportJob(
@@ -86,7 +85,8 @@ async def import_complete(
     s3_client: S3Client = Depends(get_s3_client),
     query_service: QueryService = Depends(get_query_service),
 ):
-
+    if not has_permission(current_user, Perm.WRITE):
+        raise HTTPException(403, "User does not have permission to create import jobs")
     base_stmt = query_service.org_filtered_query(
         model=ImportJob,
         account_attr="account",
@@ -146,6 +146,8 @@ async def get_imports(
     params_service: ParamsService = Depends(ParamsService),
     query_service: QueryService = Depends(get_query_service),
 ):
+    if not has_permission(current_user, Perm.READ):
+        raise HTTPException(403, "User does not have permission to view import jobs")
     try:
         stmt = query_service.org_filtered_query(
             account_attr="account", current_user=current_user, model=ImportJob
