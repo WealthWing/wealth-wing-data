@@ -53,8 +53,8 @@ class Perm(IntFlag):
 
 
 ROLE_PERMISSIONS = {
-    UserRole.SuperAdmin.value: Perm.ALL,
+    UserRole.Admin.value: Perm.ALL,
     UserRole.User_Admin.value: Perm.READ | Perm.WRITE | Perm.DELETE | Perm.SHARE | Perm.MANAGE_USERS,
-    UserRole.User.value: Perm.READ | Perm.WRITE | Perm.SHARE,
+    UserRole.User_Editor.value: Perm.READ | Perm.WRITE | Perm.SHARE,
     UserRole.User_Viewer.value: Perm.READ,
 }

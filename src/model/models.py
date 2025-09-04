@@ -60,7 +60,6 @@ class UserRole(enum.Enum):
         User_Viewer: Represents a user with read-only access.
         User: Represents a standard user with basic access.
     """
-    SuperAdmin = "SuperAdmin"
     Admin = "Admin"
     User = "User"
     User_Manager = "User_Manager"

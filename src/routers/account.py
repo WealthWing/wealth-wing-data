@@ -8,6 +8,7 @@ from src.database.connect import DBSession
 from src.util.user import get_current_user, has_permission
 from src.util.types import UserPool
 from typing import List
+from src.services.query_service import QueryService, get_query_service
 
 account_router = APIRouter()
 
@@ -38,22 +39,22 @@ async def create_account(
 
 @account_router.get("/all", response_model=list[AccountResponse])
 async def get_accounts(
-    db: DBSession, current_user: UserPool = Depends(get_current_user)
+    db: DBSession, current_user: UserPool = Depends(get_current_user), query_service: QueryService = Depends(get_query_service)
 ):
     if not has_permission(current_user, Perm.READ):
         raise HTTPException(403, "User does not have permission to view accounts")
 
     try:
-        stmt = (
-            select(Account)
-            .join(User, Account.user_id == current_user.sub)
-            .where(User.organization_id == current_user.organization_id)
+        base_stmt = query_service.org_filtered_query(
+            model=Account,
+            account_attr=None,
+            category_attr=None,
+            current_user=current_user,
         ).order_by(desc(Account.created_at))
-        
-        result = await db.execute(stmt)
+
+        result = await db.execute(base_stmt)
         accounts = result.scalars().all()
         
-
         return accounts or []
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve accounts: {e}")
