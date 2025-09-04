@@ -35,7 +35,7 @@ class AccountResponse(AccountBase):
 
     class Config:
         from_attributes = True
-        orm_mode = True             
+                 
         
 class AccountOptionResponse(BaseModel):
     """Schema for account options response."""
@@ -44,4 +44,4 @@ class AccountOptionResponse(BaseModel):
 
     class Config:
         from_attributes = True
-        orm_mode = True     
+         

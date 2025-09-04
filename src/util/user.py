@@ -44,5 +44,6 @@ def has_permission(user: UserPool, perm: Perm) -> bool:
         bool: True if the user has the specified permission, False otherwise.
     """
     role = user.role or UserRole.User_Viewer
-    allowed = ROLE_PERMISSIONS.get(role, Perm.READ)
+    allowed = ROLE_PERMISSIONS.get(role, Perm.READ.value)
+
     return (allowed & perm) == perm

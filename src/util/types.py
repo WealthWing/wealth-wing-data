@@ -9,4 +9,4 @@ class UserPool(BaseModel):
     role: Optional[str] = None
 
     class Config:
-        orm_mode = True 
+        form_attributes = True

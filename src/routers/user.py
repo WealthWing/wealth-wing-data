@@ -1,10 +1,10 @@
-from ast import Or
+from http.client import HTTPException
 from fastapi import APIRouter, Depends
-from src.schemas.user import UserResponse, UserCreateRequest
+from src.schemas.user import Perm, UserResponse, UserCreateRequest
 from src.model.models import User, Organization
 from src.database.connect import DBSession
 from typing import List
-from src.util.user import get_current_user
+from src.util.user import get_current_user, has_permission
 from src.util.types import UserPool
 from sqlalchemy import select
 
@@ -29,6 +29,7 @@ async def create_project(
     current_user: UserPool = Depends(get_current_user),
 ):
     new_org = None
+    organization_id = None  
     try:
         if user_data.invite_token:
             return UserResponse(
@@ -40,11 +41,18 @@ async def create_project(
                 if user_data.household_name
                 else f"{user_data.email} Household"
             )
+            # Check for existing org
+            existing_org = await db.execute(
+                select(Organization).where(Organization.name == household_name)
+            )
+            if existing_org.scalars().first():
+                raise HTTPException(409, f"Organization '{household_name}' already exists.")
+
             new_org = Organization(name=household_name)
             db.add(new_org)
             await db.commit()
             await db.refresh(new_org)
-            organization_id = new_org.uuid
+            organization_id = new_org.uuid  
 
         user = user_data.model_dump(
             exclude={"invite_token", "household_name"}, exclude_unset=True
@@ -56,16 +64,22 @@ async def create_project(
         await db.refresh(add_user)
         return add_user
 
+    except HTTPException:
+        await db.rollback()
+        raise
     except Exception as e:
         await db.rollback()
-        if new_org is not None and new_org.uuid is not None:
+        if new_org is not None and organization_id is not None:
             await db.delete(new_org)
             await db.commit()
-        raise Exception(f"error message: {str(e)}")
+        raise HTTPException(500, f"Internal server error: {str(e)}")
 
 
 @user_router.get("/me", response_model=UserResponse)
 async def get_user(db: DBSession, current_user: UserPool = Depends(get_current_user)):
+    if not has_permission(current_user, Perm.READ):
+        raise HTTPException(403, "User does not have permission to view user information")
+
     stmt = select(User).where(User.uuid == current_user.sub)
     result = await db.execute(stmt)
     user = result.scalars().first()

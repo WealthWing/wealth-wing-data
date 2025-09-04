@@ -48,7 +48,7 @@ class TransactionsAllResponse(BaseModel):
 
     class Config:
         from_attributes = True
-        orm_mode = True
+   
 
 
 class TransactionMonths(BaseModel):
@@ -71,4 +71,4 @@ class TransactionSummaryResponse(BaseModel):
 
     class Config:
         from_attributes = True
-        orm_mode = True
+   

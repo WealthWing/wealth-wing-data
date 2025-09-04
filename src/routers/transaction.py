@@ -1,5 +1,7 @@
+from http.client import HTTPException
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, case, select
+from src.schemas.user import Perm
 from src.model.param_models import TransactionsParams
 from src.services.params import ParamsService
 from src.model.models import Transaction, Account, AccountTypeEnum
@@ -7,11 +9,12 @@ from src.schemas.transaction import (
     TransactionCreate,
     TransactionResponse,
     TransactionSummaryResponse,
+    TransactionTotals,
     TransactionsAllResponse,
 )
 from src.database.connect import DBSession
 from src.util.types import UserPool
-from src.util.user import get_current_user
+from src.util.user import get_current_user, has_permission
 from src.util.transaction import create_transaction_in_db
 from src.services.query_service import get_query_service, QueryService
 
@@ -24,6 +27,8 @@ async def create_transaction(
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
 ):
+    if not has_permission(current_user, Perm.WRITE):
+        raise HTTPException(403, "User does not have permission to create organizations")
     return await create_transaction_in_db(transaction_data, db, current_user.sub)
 
 
@@ -35,6 +40,8 @@ async def get_transactions(
     params_service: ParamsService = Depends(ParamsService),
     query_service: QueryService = Depends(get_query_service),
 ):
+    if not has_permission(current_user, Perm.READ):
+        raise HTTPException(403, "User does not have permission to view transactions")
     base_stmt = query_service.org_filtered_query(
         model=Transaction,
         account_attr="account",
@@ -54,7 +61,12 @@ async def get_transactions(
     result = transactions.scalars().all()
 
     if not result:
-        return []
+        return TransactionSummaryResponse(
+            totals=TransactionTotals(
+                income=0, expense=0, net=0, average_monthly_spent=0.0
+            ),
+            months=[],
+        )
 
     countable = filtered_stmt.limit(None).offset(None).order_by(None)
     count_subq = countable.with_only_columns(Transaction.uuid).subquery()
@@ -128,7 +140,9 @@ async def get_transaction_summary(
     Raises:
         HTTPException: If authentication fails or database errors occur.
     """
-
+    if not has_permission(current_user, Perm.READ):
+        raise HTTPException(403, "User does not have permission to view transactions")
+    
     base_stmt = query_service.org_filtered_query(
         model=Transaction, current_user=current_user
     )
