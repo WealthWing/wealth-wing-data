@@ -39,7 +39,8 @@ origins = [
     "http://localhost:3000",
     "https://localhost:3001",
     "http://localhost:3001",
-    "https://wealth-wing-be-4d754f7dbff3.herokuapp.com"
+    "https://wealth-wing-be-4d754f7dbff3.herokuapp.com",
+    "https://wealth-wing.netlify.app"
 ]
 
 app.add_middleware(
