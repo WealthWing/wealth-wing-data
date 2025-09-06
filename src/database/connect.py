@@ -21,7 +21,7 @@ import urllib
 load_dotenv()
 logger = getLogger(__name__)
 
-sql_url = os.getenv("DATABASE_URL")
+sql_url = os.getenv("DB_URL")
 
 
 Base = declarative_base()

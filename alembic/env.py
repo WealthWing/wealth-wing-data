@@ -10,13 +10,13 @@ import os
 
 load_dotenv()
 
-sql_url = os.getenv("DATABASE_URL")
+sql_url = os.getenv("DB_URL")
 
 if sql_url and sql_url.startswith("postgres://"):
     sql_url = sql_url.replace("postgres://", "postgresql+asyncpg://", 1)
 
 if sql_url is None:
-    raise ValueError("DATABASE_URL is not set in .env file")
+    raise ValueError("DB_URL is not set in .env file")
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
