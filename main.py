@@ -10,7 +10,11 @@ from src.routers.transaction import transaction_router
 from src.routers.account import account_router
 from src.routers.project import project_router
 from src.routers.import_file import import_router
+from dotenv import load_dotenv
+import os
 
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -32,16 +36,19 @@ app.include_router(import_router, prefix="/import", tags=["import"])
 # Add middleware
 app.add_middleware(AuthMiddleware)
 
+backend_url = os.getenv("BE_URL")
+frontend_url = os.getenv("FE_URL")
 
-# Add CORS
+
 origins = [
     "https://localhost:3000",
     "http://localhost:3000",
     "https://localhost:3001",
     "http://localhost:3001",
-    "https://wealth-wing-be-4d754f7dbff3.herokuapp.com",
-    "https://wealth-wing.netlify.app"
+    backend_url,
+    frontend_url,
 ]
+
 
 app.add_middleware(
     CORSMiddleware,
