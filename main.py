@@ -1,5 +1,5 @@
 import logging
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from src.middleware.auth import AuthMiddleware
 from src.routers import health_check
