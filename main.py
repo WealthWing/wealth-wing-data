@@ -36,7 +36,7 @@ app.include_router(import_router, prefix="/import", tags=["import"])
 # Add middleware
 app.add_middleware(AuthMiddleware)
 
-backend_url = os.getenv("BE_URL")
+
 frontend_url = os.getenv("FE_URL")
 
 
@@ -45,10 +45,8 @@ origins = [
     "http://localhost:3000",
     "https://localhost:3001",
     "http://localhost:3001",
-    backend_url,
     frontend_url,
 ]
-
 
 app.add_middleware(
     CORSMiddleware,

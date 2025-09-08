@@ -1,5 +1,5 @@
 from typing import Type
-from sqlalchemy.orm import DeclarativeMeta, joinedload
+from sqlalchemy.orm import DeclarativeMeta, selectinload
 from sqlalchemy import func, select
 from src.model.models import User
 from src.util.types import UserPool
@@ -20,9 +20,9 @@ class QueryService:
             )
         )
         if account_attr:
-            q = q.options(joinedload(getattr(model, account_attr)))
+            q = q.options(selectinload(getattr(model, account_attr)))
         if category_attr:
-            q = q.options(joinedload(getattr(model, category_attr)))
+            q = q.options(selectinload(getattr(model, category_attr)))
         return q
     
 def get_query_service():

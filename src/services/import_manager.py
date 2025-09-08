@@ -21,7 +21,6 @@ def get_importer(
     s3_client: S3Client = Depends(get_s3_client),
     metadata=None,
 ):
-  
     for importer_cls in IMPORTERS:
         if importer_cls.can_handle_file(file_name=file_name, file_type=file_type, account_type=account_type):
             return importer_cls(file_content=file_content, db=db, s3_client=s3_client, current_user=current_user)
