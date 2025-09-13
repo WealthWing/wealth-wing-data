@@ -49,6 +49,16 @@ internal_transaction_types = {
 
 
 def get_internal_type(type, description):
+    """
+    Determines the internal transaction type based on the provided type and description.
+
+    Args:
+        type (str): The transaction type to check against known internal types.
+        description (str): The transaction description, used for keyword matching if type is not found.
+
+    Returns:
+        str: The corresponding internal transaction type if found, otherwise "unknown".
+    """
     if type in internal_transaction_types:
         return internal_transaction_types[type]
 

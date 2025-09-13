@@ -5,6 +5,32 @@ from src.model.models import User
 from src.util.types import UserPool
 
 class QueryService:
+    """
+    Service class for constructing organization-filtered SQLAlchemy queries.
+
+    Methods
+    -------
+    org_filtered_query(
+    ) -> Select:
+        Constructs a SQLAlchemy select query for the given model, filtered by the organization
+        of the current user. Optionally applies selectinload for specified relationship attributes.
+
+        Parameters
+        ----------
+        model : Type[DeclarativeMeta]
+            The SQLAlchemy model to query.
+        account_attr : str, optional
+            The name of the account relationship attribute to eager load.
+        category_attr : str, optional
+            The name of the category relationship attribute to eager load.
+        current_user : UserPool, optional
+            The current user object, used to filter by organization.
+
+        Returns
+        -------
+        Select
+            A SQLAlchemy select query object filtered by organization and with optional eager loading.
+    """
     def org_filtered_query(
         self,
         model: Type[DeclarativeMeta],
