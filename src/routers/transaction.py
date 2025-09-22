@@ -28,7 +28,9 @@ async def create_transaction(
     current_user: UserPool = Depends(get_current_user),
 ):
     if not has_permission(current_user, Perm.WRITE):
-        raise HTTPException(403, "User does not have permission to create organizations")
+        raise HTTPException(
+            403, "User does not have permission to create organizations"
+        )
     return await create_transaction_in_db(transaction_data, db, current_user.sub)
 
 
@@ -142,7 +144,7 @@ async def get_transaction_summary(
     """
     if not has_permission(current_user, Perm.READ):
         raise HTTPException(403, "User does not have permission to view transactions")
-    
+
     base_stmt = query_service.org_filtered_query(
         model=Transaction, current_user=current_user
     )
@@ -222,3 +224,45 @@ async def get_transaction_summary(
         },
         "months": months,
     }
+
+
+@transaction_router.get(
+    "/{transaction_id}", status_code=200, response_model=TransactionResponse
+)
+async def get_transaction_by_id(
+    transaction_id: str,
+    db: DBSession,
+    current_user: UserPool = Depends(get_current_user),
+    query_service: QueryService = Depends(get_query_service),
+):
+    
+    if not has_permission(current_user, Perm.READ):
+        raise HTTPException(403, "User does not have permission to view transactions")
+
+    base_stmt = query_service.org_filtered_query(
+        model=Transaction,
+        account_attr="account",
+         category_attr="category",
+        current_user=current_user,
+    )
+    
+    transaction_stmt = base_stmt.where(Transaction.uuid == transaction_id)
+    result = await db.execute(transaction_stmt)
+    transaction = result.scalars().first()
+
+    if not transaction:
+        raise HTTPException(404, "Transaction not found")
+
+    return TransactionResponse(
+        account_name=(transaction.account.account_name if transaction.account else None),
+        category=(transaction.category.title if transaction.category else None),  
+        uuid=transaction.uuid,
+        title=transaction.title,
+        amount=transaction.amount,
+        description=transaction.description,
+        date=transaction.date,
+        currency=transaction.currency,
+        type=transaction.type,
+        category_id=transaction.category_id,
+        user_id=transaction.user_id,
+    )
