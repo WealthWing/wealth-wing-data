@@ -160,6 +160,8 @@ class Category(Base):
     )
     title: Mapped[str] = mapped_column(String(100), nullable=False)
     type: Mapped[str] = mapped_column(String(64), nullable=False)
+    # stable machine key for merging/mapping; keep unique per org
+    slug: Mapped[str] = mapped_column(String(120), nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), insert_default=utc_now, nullable=False
