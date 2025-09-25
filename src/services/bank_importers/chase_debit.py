@@ -4,9 +4,6 @@ import io
 from src.model.models import ImportJob
 from sqlalchemy import select
 from src.model.models import Transaction, AccountTypeEnum
-import csv
-import re
-import io
 from src.util.category import get_category_id_from_row
 from src.util.transaction import (
     get_amount_cents,
@@ -23,7 +20,7 @@ class ChaseDebitImporter(BaseBankImporter):
         current_user = self.current_user
         db = self.db
         # Parse the CSV content
-        csv_reader = csv.DictReader(io.StringIO(self.file_content))    
+        csv_reader = csv.DictReader(io.StringIO(self.file_content))
         transactions_and_fps = []
         fingerprints = []
         for row in csv_reader:
@@ -75,9 +72,10 @@ class ChaseDebitImporter(BaseBankImporter):
 
         return unique_transactions
 
-
     @staticmethod
-    def can_handle_file(file_name: str, file_type: str, account_type: AccountTypeEnum) -> bool:
+    def can_handle_file(
+        file_name: str, file_type: str, account_type: AccountTypeEnum
+    ) -> bool:
         if not file_name or not file_type or not account_type:
             return False
         allowed_types = {"csv", "text/csv"}

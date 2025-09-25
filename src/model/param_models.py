@@ -60,7 +60,7 @@ class ImportParams(StandardParams):
 
 
 class TransactionsParams(StandardParams):
-    sort_by: Optional[Literal["amount", "date", "title", "category"]] = None
+    sort_by: Optional[Literal["amount", "date", "title"]] = None
     page: int = Field(1, ge=1)
     page_size: int = Field(500, ge=1)
 
