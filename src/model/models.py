@@ -159,9 +159,8 @@ class Category(Base):
         UUID(as_uuid=True), ForeignKey("organizations.uuid"), nullable=True
     )
     title: Mapped[str] = mapped_column(String(100), nullable=False)
-    type: Mapped[str] = mapped_column(String(64), nullable=False)
-    # stable machine key for merging/mapping; keep unique per org
-    slug: Mapped[str] = mapped_column(String(120), nullable=True)
+    type: Mapped[str] = mapped_column(String(64), nullable=False) # e.g., "expense", "income", "transfer"
+    slug: Mapped[str] = mapped_column(String(120), nullable=True) # URL-friendly version of the title
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), insert_default=utc_now, nullable=False
