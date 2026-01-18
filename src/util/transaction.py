@@ -75,10 +75,10 @@ def get_amount_cents(amount_str: str) -> int:
     return int(round(amount * 100))
 
 
-def get_date_from_row(row: dict) -> str:
+def get_date_from_row(row: dict):
     date_str = row.get("Posting Date") or row.get("Date")
     date_obj = datetime.strptime(date_str, "%m/%d/%Y")
-    date_obj = date_obj.replace(tzinfo=timezone.utc)
+    date_obj = date_obj.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc)
     return date_obj
 
 
