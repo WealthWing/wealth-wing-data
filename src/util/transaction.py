@@ -34,6 +34,7 @@ internal_transaction_types = {
     "CHECK_DEPOSIT": "income",
     "ACH_DEBIT": "expense",
     "ACH_CREDIT": "income",
+    "CHASE_TO_PARTNERFI": "expense",
     "ACCT_XFER": "transfer",
     "DEBIT_CARD": "expense",
     "BILLPAY": "expense",
