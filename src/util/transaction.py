@@ -6,6 +6,8 @@ from src.schemas.transaction import TransactionCreate
 import hashlib
 from src.database.connect import DBSession
 import re
+from typing import Iterable, Mapping
+
 
 
 async def create_transaction_in_db(
@@ -46,6 +48,7 @@ internal_transaction_types = {
     "Payment to": "expense",
     "Online Payment": "expense",
     "Online Transfer to": "transfer",
+    # Credit card Types
 }
 
 
@@ -69,17 +72,70 @@ def get_internal_type(type, description):
 
     return "unknown"
 
+credit_card_internal_types = {
+    "Sale": "expense",
+    "Refund": "income",
+    "Payment": "payment",
+    "Adjustment": "adjustment",
+}
+
+def get_credit_card_internal_type(type):
+    return credit_card_internal_types.get(type, "unknown")
+    
 
 def get_amount_cents(amount_str: str) -> int:
     amount = float(amount_str.replace("$", "").replace(",", "").strip())
     return int(round(amount * 100))
 
+DATE_FIELD_ALIASES = (
+    "Post Date",
+    "Posting Date",
+    "Date",
+)
 
-def get_date_from_row(row: dict):
-    date_str = row.get("Posting Date") or row.get("Date")
-    date_obj = datetime.strptime(date_str, "%m/%d/%Y")
-    date_obj = date_obj.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc)
-    return date_obj
+DATE_FORMATS = (
+    "%m/%d/%Y",
+    "%Y-%m-%d",
+    "%m/%d/%y",
+)
+
+def first_present_value(
+    row: Mapping[str, str],
+    keys: Iterable[str],
+) -> str | None:
+    for key in keys:
+        value = row.get(key)
+        if value:
+            return value.strip()
+    return None
+
+def parse_date(
+    value: str,
+    formats: Iterable[str],
+) -> datetime:
+    for fmt in formats:
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    raise ValueError(f"Unsupported date format: {value}")
+
+
+def get_date_from_row(row: dict) -> datetime:
+    date_str = first_present_value(row, DATE_FIELD_ALIASES)
+    if not date_str:
+        raise ValueError("No date field found in row")
+
+    date_obj = parse_date(date_str, DATE_FORMATS)
+    
+    print(f"Parsed date: {date_obj} from string: {date_str}")
+    return date_obj.replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+        tzinfo=timezone.utc,
+    )
 
 
 def generate_fingerprint(date, title, amount_cents):

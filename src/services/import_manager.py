@@ -6,10 +6,11 @@ from src.util.s3 import S3Client, get_s3_client
 from src.util.types import UserPool
 from src.util.user import get_current_user
 from .bank_importers.chase_debit import ChaseDebitImporter
+from .bank_importers.chase_credit import ChaseCreditImporter
 from enum import Enum
 
 
-IMPORTERS = [ChaseDebitImporter]
+IMPORTERS = [ChaseDebitImporter, ChaseCreditImporter]
 
 def get_importer(
     file_content,
