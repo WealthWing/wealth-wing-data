@@ -12,6 +12,7 @@ from src.schemas.transaction import (
     TransactionTotals,
     TransactionsAllResponse,
 )
+from typing import Optional
 from src.database.connect import DBSession
 from src.util.types import UserPool
 from src.util.user import get_current_user, has_permission
@@ -41,6 +42,7 @@ async def get_transactions(
     params: TransactionsParams = Depends(),
     params_service: ParamsService = Depends(ParamsService),
     query_service: QueryService = Depends(get_query_service),
+    account_type: Optional[AccountTypeEnum] = None,
 ):
     if not has_permission(current_user, Perm.READ):
         raise HTTPException(403, "User does not have permission to view transactions")
@@ -50,6 +52,11 @@ async def get_transactions(
         category_attr="category",
         current_user=current_user,
     )
+    
+    account_filter = account_type if account_type else AccountTypeEnum.CHECKING
+    base_stmt = base_stmt.join(Account, Transaction.account_id == Account.uuid).where(
+        Account.account_type == account_filter
+    )   
 
     filtered_stmt = params_service.process_query(
         stmt=base_stmt,
