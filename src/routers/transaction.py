@@ -1,3 +1,4 @@
+import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, case, select
 from src.schemas.user import Perm
@@ -7,17 +8,20 @@ from src.model.models import Transaction, Account, AccountTypeEnum
 from src.schemas.transaction import (
     TransactionCreate,
     TransactionResponse,
+    SubscriptionCandidateResponse,
     TransactionSummaryResponse,
     TransactionTotals,
     TransactionsAllResponse,
     SubscriptionCandidateCountResponse,
 )
+from collections import defaultdict
 from typing import Optional
 from src.database.connect import DBSession
 from src.util.types import UserPool
 from src.util.user import get_current_user, has_permission
 from src.util.transaction import create_transaction_in_db
 from src.services.query_service import get_query_service, QueryService
+from src.services.subscription_candidate_service import infer_frequency
 
 transaction_router = APIRouter()
 
@@ -237,7 +241,7 @@ async def get_transaction_summary(
 @transaction_router.get(
     "/subscription-candidates",
     status_code=200,
-    response_model=list[TransactionResponse],
+    response_model=list[SubscriptionCandidateResponse],
 )
 async def get_subscription_candidates(
     db: DBSession,
@@ -265,9 +269,20 @@ async def get_subscription_candidates(
 
         stmt = stmt.order_by(Transaction.date.desc()).limit(safe_limit)
         result = (await db.execute(stmt)).scalars().all()
+        
+        transactions_by_title = defaultdict(list)
+        for t in result:
+            transactions_by_title[t.title].append(t.date)
+        
+        seen_titles = set()
+        unique_transactions = []
+        for t in result:
+            if t.title not in seen_titles:
+                seen_titles.add(t.title)
+                unique_transactions.append(t)
 
         return [
-            TransactionResponse(
+            SubscriptionCandidateResponse(
                 account_name=(t.account.account_name if t.account else None),
                 category=(t.category.title if t.category else None),
                 uuid=t.uuid,
@@ -278,10 +293,11 @@ async def get_subscription_candidates(
                 currency=t.currency,
                 type=t.type,
                 category_id=t.category_id,
+                frequency=infer_frequency(transactions_by_title[t.title]) if t.title in transactions_by_title else "unknown",
                 user_id=t.user_id,
                 subscription_candidate=t.subscription_candidate,
             )
-            for t in result
+            for t in unique_transactions
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve subscription candidates: {str(e)}")

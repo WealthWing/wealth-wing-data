@@ -84,29 +84,29 @@ def canonical_merchant_key(title: str) -> str:
     return " ".join(tokens[:3]).strip()
 
 
-# def infer_frequency(dates: list[datetime]) -> str:
-#     if len(dates) < 2:
-#         return "unknown"
+def infer_frequency(dates: list[datetime]) -> str:
+    if len(dates) < 2:
+        return "unknown"
+    print('FREQUENCY DATES:', dates)
+    ordered = sorted(dates)
+    intervals = [
+        (ordered[i].date() - ordered[i - 1].date()).days for i in range(1, len(ordered))
+    ]
+    if not intervals:
+        return "unknown"
 
-#     ordered = sorted(dates)
-#     intervals = [
-#         (ordered[i].date() - ordered[i - 1].date()).days for i in range(1, len(ordered))
-#     ]
-#     if not intervals:
-#         return "unknown"
-
-#     typical_days = median(intervals)
-#     if typical_days <= 10:
-#         return "weekly"
-#     if typical_days <= 20:
-#         return "biweekly"
-#     if typical_days <= 45:
-#         return "monthly"
-#     if typical_days <= 120:
-#         return "quarterly"
-#     if typical_days <= 400:
-#         return "yearly"
-#     return "irregular"
+    typical_days = median(intervals)
+    if typical_days <= 10:
+        return "weekly"
+    if typical_days <= 20:
+        return "biweekly"
+    if typical_days <= 45:
+        return "monthly"
+    if typical_days <= 120:
+        return "quarterly"
+    if typical_days <= 400:
+        return "yearly"
+    return "irregular"
 
 
 # def build_candidate_summaries(

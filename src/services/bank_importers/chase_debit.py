@@ -48,17 +48,7 @@ class ChaseDebitImporter(BaseBankImporter):
             project_id = await get_project_id_from_row(
                 title=title, organization_id=current_user.organization_id, db=db
             )
-            
-            subscription_candidate = await transaction_is_subscription_candidate(
-                user_id=current_user.sub,
-                title=title,
-                amount=amount_cents,
-                date=date,
-                db=db,
-            )
-            
-            print(f"subscription_candidate: {subscription_candidate}")  # Debug log
-
+        
             transaction = Transaction(
                 user_id=current_user.sub,
                 account_id=account_id,
@@ -87,7 +77,7 @@ class ChaseDebitImporter(BaseBankImporter):
         unique_transactions = [
             txn for txn, fp in transactions_and_fps if fp not in existing_fingerprints
         ]
-
+        
         return unique_transactions
 
     @staticmethod

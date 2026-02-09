@@ -27,6 +27,12 @@ class TransactionResponse(TransactionBase):
 
     class Config:
         from_attributes = True
+        
+class SubscriptionCandidateResponse(TransactionResponse):
+    frequency: Optional[str] = None
+
+    class Config:
+        from_attributes = True        
 
 
 class TransactionUpdate(BaseModel):
