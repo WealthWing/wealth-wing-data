@@ -13,7 +13,7 @@ from src.util.transaction import (
     get_date_from_row,
     get_credit_card_internal_type
 )
-
+from src.services.subscription_candidate_service import transaction_is_subscription_candidate
 
 class ChaseCreditImporter(BaseBankImporter):
     async def parse_csv_transactions(self, import_job: ImportJob):
@@ -48,6 +48,15 @@ class ChaseCreditImporter(BaseBankImporter):
                 type=internal_type,
             )
             
+            subscription_candidate = await transaction_is_subscription_candidate(
+                user_id=current_user.sub,
+                title=title,
+                amount=amount_cents,
+                date=date,
+                db=db,
+            )
+            
+            print(f"subscription_candidate: {subscription_candidate}")  # Debug log            
             transaction = Transaction(
                 user_id=current_user.sub,
                 account_id=account_id,
@@ -72,9 +81,21 @@ class ChaseCreditImporter(BaseBankImporter):
         )
         existing_fingerprints = set(existing_fp_result.scalars().all())
         # Filter only new transactions (deduplicate)
-        unique_transactions = [
+        unique_transactions: list[Transaction] = [
             txn for txn, fp in transactions_and_fps if fp not in existing_fingerprints
         ]
+        seen_transactions: list[Transaction] = []
+        for transaction in unique_transactions:
+            subscription_candidate = await transaction_is_subscription_candidate(
+                user_id=current_user.sub,
+                title=transaction.title,
+                amount=transaction.amount,
+                date=transaction.date,
+                db=db,
+                extra_transactions=seen_transactions,
+            )        
+            transaction.subscription_candidate = subscription_candidate
+            seen_transactions.append(transaction)
 
         return unique_transactions
         

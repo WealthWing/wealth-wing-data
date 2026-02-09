@@ -17,6 +17,7 @@ import logging
 from src.util.import_file import fail_import_job, update_import_job_status
 from src.services.import_manager import get_importer
 from src.services.query_service import get_query_service, QueryService
+from src.services.subscription_candidate_service import mark_subscription_candidates
 from src.schemas.user import Perm
 
 BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
@@ -99,42 +100,61 @@ async def import_complete(
         logger.error(f"Import job not found for id: {import_data.import_job_id}")
         raise HTTPException(400, "Invalid import job")
 
+    job_id = import_job.uuid
+    job_user_id = import_job.user_id
+    job_account_id = import_job.account_id
+    job_file_key = import_job.file_key
+    job_file_name = import_job.file_name
+    job_file_type = import_job.file_type
+    job_account_type = import_job.account.account_type
+
     try:
-        file_content = s3_client.get_s3_file(key=import_job.file_key)
+        file_content = s3_client.get_s3_file(key=job_file_key)
         if not file_content:
-            logger.error(f"File not found in S3 for key: {import_job.file_key}")
+            logger.error(f"File not found in S3 for key: {job_file_key}")
             raise HTTPException(status_code=404, detail="File not found in S3")
 
         importer = get_importer(
             file_content=file_content,
-            file_name=import_job.file_name,
-            file_type=import_job.file_type,
-            account_type=import_job.account.account_type,
+            file_name=job_file_name,
+            file_type=job_file_type,
+            account_type=job_account_type,
             db=db,
             s3_client=s3_client,
             current_user=current_user,
         )
         parsed_transactions = await importer.parse_csv_transactions(import_job)
         db.add_all(parsed_transactions)
-        
+
         await db.commit()
-        await update_import_job_status(
-            import_job=import_job,
+        # await mark_subscription_candidates(
+        #     db=db,
+        #     user_id=job_user_id,
+        #     account_id=job_account_id,
+        # )
+        updated_import_job = await update_import_job_status(
+            import_job_id=job_id,
             new_status=ImportJobStatus.COMPLETED,
             db=db,
         )
 
-        return ImportFileResponse.model_validate(import_job)
+        return ImportFileResponse.model_validate(updated_import_job)
 
     except Exception as e:
         logger.error(
-            f"Error processing import job {import_job.uuid}: {e}", exc_info=True
+            f"Error processing import job {job_id}: {e}", exc_info=True
         )
-        await fail_import_job(
-            db=db,
-            import_job=import_job,
-            error_message=str(e),
-        )
+        await db.rollback()
+        try:
+            await fail_import_job(
+                db=db,
+                import_job_id=job_id,
+                error_message=str(e),
+            )
+        except Exception:
+            logger.error(
+                f"Error marking import job {job_id} as FAILED", exc_info=True
+            )
         raise HTTPException(status_code=500, detail=f"Failed to read CSV file: {e}")
 
 

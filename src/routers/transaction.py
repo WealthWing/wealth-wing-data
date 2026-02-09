@@ -1,5 +1,4 @@
-from http.client import HTTPException
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, case, select
 from src.schemas.user import Perm
 from src.model.param_models import TransactionsParams
@@ -11,6 +10,7 @@ from src.schemas.transaction import (
     TransactionSummaryResponse,
     TransactionTotals,
     TransactionsAllResponse,
+    SubscriptionCandidateCountResponse,
 )
 from typing import Optional
 from src.database.connect import DBSession
@@ -70,11 +70,11 @@ async def get_transactions(
     result = transactions.scalars().all()
 
     if not result:
-        return TransactionSummaryResponse(
-            totals=TransactionTotals(
-                income=0, expense=0, net=0, average_monthly_spent=0.0
-            ),
-            months=[],
+        return TransactionsAllResponse(
+            transactions=[],
+            total_count=0,
+            has_more=False,
+            total_pages=0,
         )
 
     countable = filtered_stmt.limit(None).offset(None).order_by(None)
@@ -105,6 +105,7 @@ async def get_transactions(
             type=t.type,
             category_id=t.category_id,
             user_id=t.user_id,
+            subscription_candidate=t.subscription_candidate,
         )
         for t in result
     ]
@@ -234,6 +235,60 @@ async def get_transaction_summary(
 
 
 @transaction_router.get(
+    "/subscription-candidates",
+    status_code=200,
+    response_model=list[TransactionResponse],
+)
+async def get_subscription_candidates(
+    db: DBSession,
+    current_user: UserPool = Depends(get_current_user),
+    query_service: QueryService = Depends(get_query_service),
+    account_type: Optional[AccountTypeEnum] = None,
+    limit: int = 100,
+):
+    if not has_permission(current_user, Perm.READ):
+        raise HTTPException(403, "User does not have permission to view transactions")
+
+    try:
+        safe_limit = min(max(limit, 1), 500)
+        stmt = query_service.org_filtered_query(
+            model=Transaction,
+            account_attr="account",
+            category_attr="category",
+            current_user=current_user,
+        ).where(Transaction.subscription_candidate.is_(True))
+
+        if account_type:
+            stmt = stmt.join(Account, Transaction.account_id == Account.uuid).where(
+                Account.account_type == account_type
+            )
+
+        stmt = stmt.order_by(Transaction.date.desc()).limit(safe_limit)
+        result = (await db.execute(stmt)).scalars().all()
+
+        return [
+            TransactionResponse(
+                account_name=(t.account.account_name if t.account else None),
+                category=(t.category.title if t.category else None),
+                uuid=t.uuid,
+                title=t.title,
+                amount=t.amount,
+                description=t.description,
+                date=t.date,
+                currency=t.currency,
+                type=t.type,
+                category_id=t.category_id,
+                user_id=t.user_id,
+                subscription_candidate=t.subscription_candidate,
+            )
+            for t in result
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve subscription candidates: {str(e)}")
+
+
+
+@transaction_router.get(
     "/{transaction_id}", status_code=200, response_model=TransactionResponse
 )
 async def get_transaction_by_id(
@@ -272,4 +327,5 @@ async def get_transaction_by_id(
         type=transaction.type,
         category_id=transaction.category_id,
         user_id=transaction.user_id,
+        subscription_candidate=transaction.subscription_candidate,
     )

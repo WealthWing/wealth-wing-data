@@ -14,6 +14,7 @@ class TransactionBase(BaseModel):
     type: Optional[str] = "N/A"
     category: Optional[str] = None
     account_name: Optional[str] = None
+    subscription_candidate: bool = False
 
 
 class TransactionCreate(TransactionBase):
@@ -71,4 +72,19 @@ class TransactionSummaryResponse(BaseModel):
 
     class Config:
         from_attributes = True
-   
+
+
+class SubscriptionCandidateCountResponse(BaseModel):
+    count: int
+
+
+class SubscriptionCandidateItem(BaseModel):
+    merchant: str
+    amount: float
+    frequency: str
+    transactions: int
+
+
+class SubscriptionCandidatesResponse(BaseModel):
+    has_subscription_candidates: bool
+    candidates: list[SubscriptionCandidateItem] = []

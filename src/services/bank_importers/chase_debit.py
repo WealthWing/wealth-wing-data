@@ -12,6 +12,7 @@ from src.util.transaction import (
     generate_fingerprint,
     clean_description,
 )
+from src.services.subscription_candidate_service import transaction_is_subscription_candidate
 from src.util.project import get_project_id_from_row
 
 
@@ -19,8 +20,15 @@ class ChaseDebitImporter(BaseBankImporter):
     async def parse_csv_transactions(self, import_job: ImportJob):
         current_user = self.current_user
         db = self.db
+        import_job_id = import_job.uuid
+        account_id = import_job.account_id
         # Parse the CSV content
         csv_reader = csv.DictReader(io.StringIO(self.file_content))
+            # Validate required headers
+        required_headers = {"Posting Date", "Description", "Amount", "Type", "Balance"}
+        if not csv_reader.fieldnames or not required_headers.issubset(set(csv_reader.fieldnames)):
+            raise ValueError(f"Missing required columns. Expected: {required_headers}, Got: {set(csv_reader.fieldnames or [])}")
+        
         transactions_and_fps = []
         fingerprints = []
         for row in csv_reader:
@@ -40,11 +48,21 @@ class ChaseDebitImporter(BaseBankImporter):
             project_id = await get_project_id_from_row(
                 title=title, organization_id=current_user.organization_id, db=db
             )
+            
+            subscription_candidate = await transaction_is_subscription_candidate(
+                user_id=current_user.sub,
+                title=title,
+                amount=amount_cents,
+                date=date,
+                db=db,
+            )
+            
+            print(f"subscription_candidate: {subscription_candidate}")  # Debug log
 
             transaction = Transaction(
                 user_id=current_user.sub,
-                account_id=import_job.account_id,
-                import_job_id=import_job.uuid,
+                account_id=account_id,
+                import_job_id=import_job_id,
                 project_id=project_id,
                 amount=amount_cents,
                 title=title,
@@ -60,7 +78,7 @@ class ChaseDebitImporter(BaseBankImporter):
         existing_fp_result = await db.execute(
             select(Transaction.fingerprint).where(
                 Transaction.fingerprint.in_(fingerprints),
-                Transaction.account_id == import_job.account_id,
+                Transaction.account_id == account_id,
             )
         )
         existing_fingerprints = set(existing_fp_result.scalars().all())
