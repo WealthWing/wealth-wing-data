@@ -6,7 +6,7 @@ from src.model.models import Category, Transaction
 
 
 async def get_category_id_from_row(
-    title: str, category: str, organization_id: str, db: DBSession
+    title: str, category: str, organization_id: str, db: DBSession, type: str = None
 ):
     """
     Determines the category UUID for a given transaction based on a specific logic:
@@ -78,6 +78,34 @@ async def get_category_id_from_row(
             ),
         )
     )
+    found_category_result = await db.execute(
+        select(Category)
+        .where(
+            Category.title.ilike(category.strip()),
+            Category.organization_id == organization_id,
+        )
+        .order_by(Category.organization_id.desc()) 
+        .limit(1)
+    )
     found_category = found_category_result.scalar_one_or_none()
+
+    if found_category is None:
+        slugged_title = category.strip().lower().replace(" ", "-")
+        new_category = Category(
+            title=category.strip(),
+            organization_id=organization_id,
+            slug=slugged_title,
+            type=type or "CUSTOM"
+        )
+        try:
+            db.add(new_category)
+            await db.commit()
+            await db.refresh(new_category)
+            return new_category.uuid
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(
+                status_code=500, detail=f"Failed to create new category: {e}"
+            )
 
     return found_category.uuid if found_category else None

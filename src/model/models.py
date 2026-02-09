@@ -12,6 +12,7 @@ from sqlalchemy import (
     Boolean,
     Text,
     select,
+    false,
 )
 
 from sqlalchemy.sql import func
@@ -60,6 +61,7 @@ class UserRole(enum.Enum):
         User_Viewer: Represents a user with read-only access.
         User: Represents a standard user with basic access.
     """
+
     Admin = "Admin"
     User = "User"
     User_Manager = "User_Manager"
@@ -211,6 +213,9 @@ class Transaction(Base):
     )  # e.g., "expense", "income", "transfer", "refund"
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     fingerprint = Column(String(64), nullable=False)
+    subscription_candidate: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=false()
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), insert_default=utc_now, nullable=False
     )

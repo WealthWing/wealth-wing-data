@@ -11,7 +11,6 @@ from src.util.transaction import (
     generate_fingerprint,
     get_amount_cents,
     get_date_from_row,
-    get_internal_type,
     get_credit_card_internal_type
 )
 
@@ -62,7 +61,6 @@ class ChaseCreditImporter(BaseBankImporter):
                 category_id=category_id,
                 description=transaction_memo,
             )
-            print(f"Parsed transaction: {transaction.title}, Amount: {transaction.amount}, Date: {transaction.date}, Type: {transaction.type}")
             fingerprints.append(fingerprint)
             transactions_and_fps.append((transaction, fingerprint))
             
