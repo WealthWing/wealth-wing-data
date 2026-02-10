@@ -10,6 +10,7 @@ from sqlalchemy import select, update
 from statistics import median
 from src.database.connect import DBSession
 from src.model.models import Subscription, Transaction
+from dateutil.relativedelta import relativedelta
 
 
 MIN_OCCURRENCES = 3
@@ -87,7 +88,7 @@ def canonical_merchant_key(title: str) -> str:
 def infer_frequency(dates: list[datetime]) -> str:
     if len(dates) < 2:
         return "unknown"
-    print('FREQUENCY DATES:', dates)
+    
     ordered = sorted(dates)
     intervals = [
         (ordered[i].date() - ordered[i - 1].date()).days for i in range(1, len(ordered))
@@ -107,6 +108,39 @@ def infer_frequency(dates: list[datetime]) -> str:
     if typical_days <= 400:
         return "yearly"
     return "irregular"
+
+def calculate_next_billing_date(current_billing_date: datetime, billing_cycle: str) -> datetime:
+    """
+    Calculate next billing date from the most recent billing date.
+    
+    Args:
+        current_billing_date: The last/current billing date
+        billing_cycle: One of 'weekly', 'monthly', 'quarterly', 'yearly'
+    
+    Returns:
+        Next future billing date
+    """
+    today = datetime.now()
+    next_date = current_billing_date
+    
+    # Define cycle increments
+    cycle_map = {
+        'weekly': relativedelta(weeks=1),
+        'monthly': relativedelta(months=1),
+        'quarterly': relativedelta(months=3),
+        'yearly': relativedelta(years=1),
+    }
+    
+    if billing_cycle not in cycle_map:
+        raise ValueError(f"Unknown billing cycle: {billing_cycle}")
+    
+    increment = cycle_map[billing_cycle]
+    
+    # Keep adding billing cycles until we find the next future date
+    while next_date <= today:
+        next_date += increment
+    
+    return next_date
 
 
 # def build_candidate_summaries(

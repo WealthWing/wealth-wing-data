@@ -3,3 +3,4 @@ venv/
 boto-sign-in.py
 docker-compose.yml
 __pycache__/
+plans

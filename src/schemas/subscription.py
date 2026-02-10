@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
@@ -32,7 +32,12 @@ class SubscriptionBase(BaseModel):
     
     
 class SubscriptionCreate(SubscriptionBase):
-    pass
+    @field_validator('start_date', 'end_date', 'next_billing_date', 'trial_end_date', 'cancellation_date', 'contract_end_date')
+    @classmethod
+    def ensure_timezone_aware(cls, v: Optional[datetime]) -> Optional[datetime]:
+        if v and v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v
 
 
 class SubscriptionUpdate(BaseModel):
@@ -70,12 +75,18 @@ class SubscriptionInDBBase(SubscriptionBase):
         from_attributes = True
 
 class SubscriptionResponse(SubscriptionInDBBase):
-    user: UserResponse     
+    pass  
 
-class SubscriptionsAllResponse(BaseModel):
-    uuid: UUID
-    name: str
+class SubscriptionsAllResponse(SubscriptionInDBBase):
+    pass
     class Config:
-        from_orm = True    
-    
+        from_attributes = True
+        
+        
+class SubscriptionSummaryResponse(BaseModel):            
+    total_monthly_cost: Decimal
+    total_annual_cost: Decimal
+    next_billing_date: Optional[datetime]
+    last_charge_date: Optional[datetime]
+    subscription_details: SubscriptionBase
  

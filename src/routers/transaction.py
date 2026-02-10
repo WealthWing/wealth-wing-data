@@ -39,6 +39,9 @@ async def create_transaction(
     return await create_transaction_in_db(transaction_data, db, current_user.sub)
 
 
+@transaction_router.get("/")
+
+
 @transaction_router.get("/all", status_code=200, response_model=TransactionsAllResponse)
 async def get_transactions(
     db: DBSession,
@@ -301,7 +304,6 @@ async def get_subscription_candidates(
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve subscription candidates: {str(e)}")
-
 
 
 @transaction_router.get(

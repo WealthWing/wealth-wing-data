@@ -119,13 +119,22 @@ class Subscription(Base):
     amount: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
     currency = Column(String(10), default="USD")
     billing_frequency = Column(String(50))
-    start_date = Column(DateTime)
-    end_date = Column(DateTime)
-    next_billing_date = Column(DateTime)
+    start_date = Column(DateTime(timezone=True))
+    end_date = Column(DateTime(timezone=True))
+    next_billing_date = Column(DateTime(timezone=True))
+    cancellation_date = Column(DateTime(timezone=True))
+    trial_end_date = Column(DateTime(timezone=True))
+    contract_end_date = Column(DateTime(timezone=True))
     auto_renew = Column(Boolean, default=True)
     status = Column(String(50))
     payment_method = Column(String(50))
     notes = Column(Text)
+    trial_period = Column(Boolean, default=False)
+    total_amount_spent = Column(Numeric(15, 2))
+    contract_length = Column(String(50))
+    usage_limits = Column(String(255))
+    support_contact = Column(String(255))
+    website_url = Column(String(255))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), insert_default=utc_now, nullable=False
     )
@@ -135,20 +144,12 @@ class Subscription(Base):
         onupdate=utc_now,
         nullable=False,
     )
-    cancellation_date = Column(DateTime)
-    trial_period = Column(Boolean, default=False)
-    trial_end_date = Column(DateTime)
-    total_amount_spent = Column(Numeric(15, 2))
-    contract_length = Column(String(50))
-    contract_end_date = Column(DateTime)
-    usage_limits = Column(String(255))
-    support_contact = Column(String(255))
-    website_url = Column(String(255))
 
     user: Mapped["User"] = relationship("User", back_populates="subscriptions")
     category: Mapped["Category"] = relationship(
         "Category", back_populates="subscriptions"
     )
+    transactions = relationship("Transaction", back_populates="subscription")
 
 
 class Category(Base):
@@ -204,6 +205,12 @@ class Transaction(Base):
         UUID(as_uuid=True), ForeignKey("import_jobs.uuid"), nullable=True
     )
 
+    subscription_id: Mapped[Optional[UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("subscriptions.uuid", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     amount: Mapped[BigInteger] = mapped_column(BigInteger, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="USD")
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -233,6 +240,9 @@ class Transaction(Base):
     )
     project: Mapped["Project"] = relationship("Project", back_populates="transactions")
     account = relationship("Account", back_populates="transactions")
+    subscription: Mapped[Optional["Subscription"]] = relationship(
+        "Subscription", back_populates="transactions"
+    )
 
 
 class Project(Base):

@@ -47,16 +47,7 @@ class ChaseCreditImporter(BaseBankImporter):
                 db=db,
                 type=internal_type,
             )
-            
-            subscription_candidate = await transaction_is_subscription_candidate(
-                user_id=current_user.sub,
-                title=title,
-                amount=amount_cents,
-                date=date,
-                db=db,
-            )
-            
-            print(f"subscription_candidate: {subscription_candidate}")  # Debug log            
+                    
             transaction = Transaction(
                 user_id=current_user.sub,
                 account_id=account_id,

@@ -3,6 +3,7 @@ from src.schemas.subscription import (
     SubscriptionCreate,
     SubscriptionUpdate,
     SubscriptionResponse,
+    SubscriptionSummaryResponse,
     SubscriptionsAllResponse,
 )
 from src.model.models import Subscription
@@ -12,12 +13,12 @@ from src.database.connect import DBSession
 from typing import List
 from sqlalchemy.orm import joinedload
 from sqlalchemy.future import select
+from src.services.subscription_candidate_service import calculate_next_billing_date
 
 
 subscription_router = APIRouter()
 
 """ Create a new subscription """
-
 
 @subscription_router.post(
     "/create", status_code=200, response_model=SubscriptionResponse
@@ -36,7 +37,7 @@ async def create_subscription(
         await db.refresh(subscription)
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to create store: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create subscription: {str(e)}")
     return subscription
 
 
@@ -75,25 +76,26 @@ async def update_subscription(
 
 """ Get all subscriptions """
 
-
 @subscription_router.get(
-    "/summary", status_code=200, response_model=List[SubscriptionsAllResponse]
+    "/all", status_code=200, response_model=List[SubscriptionsAllResponse]
 )
 async def get_user_subscriptions(
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
 ):
-    stmt = select(Subscription.uuid, Subscription.name, Subscription.amount).where(
-        Subscription.user_id == current_user.sub
-    )
-    result = await db.execute(stmt)
-    subscriptions = result.all()
-    return subscriptions
+    try:
+        stmt = select(Subscription).where(
+            Subscription.user_id == current_user.sub
+        )
+        result = await db.execute(stmt)
+        subscriptions = result.scalars().all()
+        return subscriptions
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve subscriptions: {e}")
 
 
 """ Get a single subscription """
-
-
 @subscription_router.get(
     "/detail/{subscription_id}", status_code=200, response_model=SubscriptionResponse
 )
@@ -105,13 +107,14 @@ async def get_subscription(
     stmt = (
         select(Subscription)
         .options(joinedload(Subscription.user))
-        .where(Subscription.uuid == subscription_id)
-        .where(Subscription.user_id == current_user.sub)
+        .where(Subscription.uuid == subscription_id and Subscription.user_id == current_user.sub)
     )
     result = await db.execute(stmt)
     subscription = result.scalars().first()
     if not subscription:
         raise HTTPException(status_code=404, detail="Subscription not found")
+    
+
     return subscription
 
 

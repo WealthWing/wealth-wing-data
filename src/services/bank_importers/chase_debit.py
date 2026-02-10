@@ -74,10 +74,23 @@ class ChaseDebitImporter(BaseBankImporter):
         existing_fingerprints = set(existing_fp_result.scalars().all())
 
         # Filter only new transactions (deduplicate)
-        unique_transactions = [
+        unique_transactions: list[Transaction] = [
             txn for txn, fp in transactions_and_fps if fp not in existing_fingerprints
         ]
         
+        seen_transactions: list[Transaction] = []
+        for transaction in unique_transactions:
+            subscription_candidate = await transaction_is_subscription_candidate(
+                user_id=current_user.sub,
+                title=transaction.title,
+                amount=transaction.amount,
+                date=transaction.date,
+                db=db,
+                extra_transactions=seen_transactions,
+            )        
+            transaction.subscription_candidate = subscription_candidate
+            seen_transactions.append(transaction)
+
         return unique_transactions
 
     @staticmethod
