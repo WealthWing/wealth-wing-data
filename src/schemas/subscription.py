@@ -83,10 +83,15 @@ class SubscriptionsAllResponse(SubscriptionInDBBase):
         from_attributes = True
         
         
-class SubscriptionSummaryResponse(BaseModel):            
-    total_monthly_cost: Decimal
-    total_annual_cost: Decimal
-    next_billing_date: Optional[datetime]
-    last_charge_date: Optional[datetime]
-    subscription_details: SubscriptionBase
+class SubscriptionSummaryResponse(BaseModel):
+    total_monthly_cost_cents: int
+    total_subscriptions_count: int
+    total_active_subscriptions_count: int
+    total_inactive_subscriptions_count: int
+    total_paused_subscriptions_count: int
+    
+    class Config:
+        from_attributes = True
+    
+    
  

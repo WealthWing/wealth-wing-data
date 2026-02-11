@@ -15,6 +15,7 @@ class TransactionBase(BaseModel):
     category: Optional[str] = None
     account_name: Optional[str] = None
     subscription_candidate: bool = False
+    subscription_id: Optional[UUID] = None
 
 
 class TransactionCreate(TransactionBase):

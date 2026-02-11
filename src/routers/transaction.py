@@ -113,6 +113,7 @@ async def get_transactions(
             category_id=t.category_id,
             user_id=t.user_id,
             subscription_candidate=t.subscription_candidate,
+            subscription_id=t.subscription_id,
         )
         for t in result
     ]
@@ -299,6 +300,7 @@ async def get_subscription_candidates(
                 frequency=infer_frequency(transactions_by_title[t.title]) if t.title in transactions_by_title else "unknown",
                 user_id=t.user_id,
                 subscription_candidate=t.subscription_candidate,
+                subscription_id=t.subscription_id,
             )
             for t in unique_transactions
         ]
@@ -346,4 +348,5 @@ async def get_transaction_by_id(
         category_id=transaction.category_id,
         user_id=transaction.user_id,
         subscription_candidate=transaction.subscription_candidate,
+        subscription_id=transaction.subscription_id,
     )
