@@ -1,18 +1,20 @@
 import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, case, select
+from sqlalchemy.exc import SQLAlchemyError
 from src.schemas.user import Perm
 from src.model.param_models import TransactionsParams
 from src.services.params import ParamsService
-from src.model.models import Transaction, Account, AccountTypeEnum
+from src.model.models import Transaction, Account, AccountTypeEnum, Subscription
 from src.schemas.transaction import (
     TransactionCreate,
     TransactionResponse,
     SubscriptionCandidateResponse,
     TransactionSummaryResponse,
-    TransactionTotals,
+    TransactionUpdateSubscriptionRequest,
     TransactionsAllResponse,
-    SubscriptionCandidateCountResponse,
+    TransactionUpdateSubscriptionResponse
+  
 )
 from collections import defaultdict
 from typing import Optional
@@ -350,3 +352,62 @@ async def get_transaction_by_id(
         subscription_candidate=transaction.subscription_candidate,
         subscription_id=transaction.subscription_id,
     )
+
+@transaction_router.post("/update-subscription", status_code=200, response_model=TransactionUpdateSubscriptionResponse)
+async def update_transaction_subscription(
+    transaction_data: TransactionUpdateSubscriptionRequest,
+    db: DBSession,
+    current_user: UserPool = Depends(get_current_user),
+    query_service: QueryService = Depends(get_query_service),
+):
+    if not has_permission(current_user, Perm.WRITE):
+        raise HTTPException(403, "User does not have permission to update transactions")
+
+    transaction_name = (transaction_data.transaction_name or "").strip()
+    if not transaction_name:
+        raise HTTPException(422, "transaction_name must not be empty")
+
+    try:
+        subscription_stmt = query_service.org_filtered_query(
+            model=Subscription,
+            current_user=current_user,
+        ).where(Subscription.uuid == transaction_data.subscription_id)
+        subscription = (await db.execute(subscription_stmt)).scalars().first()
+        if not subscription:
+            raise HTTPException(404, "Subscription not found")
+
+        base_stmt = query_service.org_filtered_query(
+            model=Transaction,
+            current_user=current_user,
+        )
+
+        transaction_stmt = base_stmt.where(
+            Transaction.title == transaction_name
+        )
+        transactions = (await db.execute(transaction_stmt)).scalars().all()
+        if not transactions:
+            raise HTTPException(
+                404, "No matching subscription-candidate transactions found"
+            )
+
+        for transaction in transactions:
+            transaction.subscription_id = transaction_data.subscription_id
+            transaction.subscription_candidate = False
+
+        await db.commit()
+        return {
+            "updated_count": len(transactions),
+            "subscription_id": str(transaction_data.subscription_id),
+            "transaction_name": transaction_name,
+        }
+    except HTTPException:
+        raise
+    except SQLAlchemyError:
+        await db.rollback()
+        raise HTTPException(500, "Database error while updating subscription")
+    except Exception:
+        await db.rollback()
+        raise HTTPException(500, "Failed to update transaction subscription")
+    
+    
+    

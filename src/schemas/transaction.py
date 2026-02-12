@@ -95,3 +95,12 @@ class SubscriptionCandidateItem(BaseModel):
 class SubscriptionCandidatesResponse(BaseModel):
     has_subscription_candidates: bool
     candidates: list[SubscriptionCandidateItem] = []
+
+class TransactionUpdateSubscriptionRequest(BaseModel):
+    subscription_id: UUID 
+    transaction_name: str
+    
+class TransactionUpdateSubscriptionResponse(BaseModel):
+    updated_count: int
+    subscription_id: UUID
+    transaction_name: str

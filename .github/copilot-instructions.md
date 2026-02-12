@@ -167,3 +167,6 @@ Critical rules:
 - Use QueryService for org scoping
 - Preserve fingerprint dedup
 - Require Alembic migrations for schema changes
+
+## Important Notes:
+- Wen defining shema models using pydantic always make sure you label at the end if it is Request or Response model. This is important for readability and maintainability of the codebase. For example, if you are defining a schema for creating a transaction, you should name it `TransactionCreateRequest` to indicate that it is a request model. Similarly, if you are defining a schema for returning transaction data, you should name it `TransactionResponse` to indicate that it is a response model. This naming convention helps other developers understand the purpose of each schema at a glance and promotes consistency throughout the codebase.

@@ -48,6 +48,19 @@ class ChaseDebitImporter(BaseBankImporter):
             project_id = await get_project_id_from_row(
                 title=title, organization_id=current_user.organization_id, db=db
             )
+            
+            # TODO - lets find a better way to handle this
+            sub_res = await db.execute(
+                select(Transaction.subscription_id)
+                .where(
+                    Transaction.user_id == current_user.sub,
+                    Transaction.title == title,
+                    Transaction.subscription_id.is_not(None),
+                )
+                .order_by(Transaction.date.desc())
+                .limit(1)
+            )
+            existing_subscription_id = sub_res.scalar_one_or_none()
         
             transaction = Transaction(
                 user_id=current_user.sub,
@@ -60,6 +73,7 @@ class ChaseDebitImporter(BaseBankImporter):
                 type=internal_type,
                 fingerprint=fingerprint,
                 category_id=category_id,
+                subscription_id= existing_subscription_id
             )
             fingerprints.append(fingerprint)
             transactions_and_fps.append((transaction, fingerprint))
@@ -80,15 +94,18 @@ class ChaseDebitImporter(BaseBankImporter):
         
         seen_transactions: list[Transaction] = []
         for transaction in unique_transactions:
-            subscription_candidate = await transaction_is_subscription_candidate(
-                user_id=current_user.sub,
-                title=transaction.title,
-                amount=transaction.amount,
-                date=transaction.date,
-                db=db,
-                extra_transactions=seen_transactions,
-            )        
-            transaction.subscription_candidate = subscription_candidate
+            if transaction.subscription_id:
+                subscription_candidate = False
+            else:
+                subscription_candidate = await transaction_is_subscription_candidate(
+                    user_id=current_user.sub,
+                    title=transaction.title,
+                    amount=transaction.amount,
+                    date=transaction.date,
+                    db=db,
+                    extra_transactions=seen_transactions,
+                )        
+                transaction.subscription_candidate = subscription_candidate
             seen_transactions.append(transaction)
 
         return unique_transactions

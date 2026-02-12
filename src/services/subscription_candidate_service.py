@@ -242,7 +242,6 @@ async def transaction_is_subscription_candidate(
             Transaction.amount.between(min_amount, max_amount),
         )
     )).all()
-
     # include the new transaction
     dates = [tx_date for (tx_date,) in rows]
    
