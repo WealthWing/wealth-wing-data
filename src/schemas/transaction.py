@@ -104,3 +104,40 @@ class TransactionUpdateSubscriptionResponse(BaseModel):
     updated_count: int
     subscription_id: UUID
     transaction_name: str
+
+
+class TransactionByNamePeriodResponse(BaseModel):
+    from_date: Optional[datetime] = None
+    to_date: Optional[datetime] = None
+
+
+class TransactionByNameMetaResponse(BaseModel):
+    title: str
+    period: TransactionByNamePeriodResponse
+    total_transactions: int
+
+
+class TransactionByNameStatsResponse(BaseModel):
+    total_spent: float
+    average_per_month: float
+    max_single_charge: float
+    min_single_charge: float
+    last_transaction_date: Optional[datetime] = None
+    first_transaction_date: Optional[datetime] = None
+
+
+class TransactionByNameYearComparisonResponse(BaseModel):
+    current_year_total: float
+    previous_year_total: float
+    difference: float
+    percentage_change: float
+
+
+class TransactionsByNameResponse(BaseModel):
+    meta: TransactionByNameMetaResponse
+    stats: TransactionByNameStatsResponse
+    year_comparison: Optional[TransactionByNameYearComparisonResponse] = None
+    transactions: list[TransactionResponse] = []
+
+    class Config:
+        from_attributes = True

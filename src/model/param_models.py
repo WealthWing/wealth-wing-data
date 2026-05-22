@@ -69,3 +69,17 @@ class TransactionsParams(StandardParams):
         if value and value.tzinfo is None:
             return value.replace(tzinfo=timezone.utc)
         return value
+
+
+class TransactionByNameParams(StandardParams):
+    title: str
+    sort_by: Optional[Literal["amount", "date", "title"]] = None
+    page: int = Field(1, ge=1)
+    page_size: int = Field(500, ge=1)
+    include_year_comparison: bool = True
+
+    @field_validator("from_date", "to_date")
+    def validate_dates(cls, value: Optional[datetime]) -> Optional[datetime]:
+        if value and value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value

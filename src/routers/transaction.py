@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, case, select
 from sqlalchemy.exc import SQLAlchemyError
 from src.schemas.user import Perm
-from src.model.param_models import TransactionsParams
+from src.model.param_models import TransactionsParams, TransactionByNameParams
 from src.services.params import ParamsService
 from src.model.models import Transaction, Account, AccountTypeEnum, Subscription
 from src.schemas.transaction import (
@@ -13,8 +13,12 @@ from src.schemas.transaction import (
     TransactionSummaryResponse,
     TransactionUpdateSubscriptionRequest,
     TransactionsAllResponse,
-    TransactionUpdateSubscriptionResponse
-  
+    TransactionUpdateSubscriptionResponse,
+    TransactionsByNameResponse,
+    TransactionByNameMetaResponse,
+    TransactionByNamePeriodResponse,
+    TransactionByNameStatsResponse,
+    TransactionByNameYearComparisonResponse,
 )
 from collections import defaultdict
 from typing import Optional
@@ -308,6 +312,194 @@ async def get_subscription_candidates(
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve subscription candidates: {str(e)}")
+
+
+@transaction_router.get(
+    "/by-name", status_code=200, response_model=TransactionsByNameResponse
+)
+async def get_transactions_by_name(
+    db: DBSession,
+    current_user: UserPool = Depends(get_current_user),
+    params: TransactionByNameParams = Depends(),
+    params_service: ParamsService = Depends(ParamsService),
+    query_service: QueryService = Depends(get_query_service),
+    account_type: Optional[AccountTypeEnum] = None,
+):
+    """
+    Get all transactions matching a specific title/merchant name within a date range.
+    Returns spending statistics and year-over-year comparison.
+    """
+    if not has_permission(current_user, Perm.READ):
+        raise HTTPException(403, "User does not have permission to view transactions")
+
+    title = (params.title or "").strip()
+    if not title:
+        raise HTTPException(422, "title query parameter is required")
+
+    try:
+        # --- Main query: transactions matching title in date range ---
+        base_stmt = query_service.org_filtered_query(
+            model=Transaction,
+            account_attr="account",
+            category_attr="category",
+            current_user=current_user,
+        )
+
+        if account_type:
+            base_stmt = base_stmt.join(
+                Account, Transaction.account_id == Account.uuid
+            ).where(Account.account_type == account_type)
+
+        title_stmt = base_stmt.where(func.lower(Transaction.title) == title.lower())
+
+        filtered_stmt = params_service.process_query(
+            stmt=title_stmt,
+            params=params,
+            model=Transaction,
+            date_field="date",
+            search_fields=["title", "type"],
+        )
+
+        result = (await db.execute(filtered_stmt)).scalars().all()
+
+        if not result:
+            return TransactionsByNameResponse(
+                meta=TransactionByNameMetaResponse(
+                    title=title,
+                    period=TransactionByNamePeriodResponse(
+                        from_date=params.from_date,
+                        to_date=params.to_date,
+                    ),
+                    total_transactions=0,
+                ),
+                stats=TransactionByNameStatsResponse(
+                    total_spent=0.0,
+                    average_per_month=0.0,
+                    max_single_charge=0.0,
+                    min_single_charge=0.0,
+                    last_transaction_date=None,
+                    first_transaction_date=None,
+                ),
+                year_comparison=None,
+                transactions=[],
+            )
+
+        # --- Build transaction response list ---
+        transactions = [
+            TransactionResponse(
+                account_name=(t.account.account_name if t.account else None),
+                category=(t.category.title if t.category else None),
+                uuid=t.uuid,
+                title=t.title,
+                amount=t.amount,
+                description=t.description,
+                date=t.date,
+                currency=t.currency,
+                type=t.type,
+                category_id=t.category_id,
+                user_id=t.user_id,
+                subscription_candidate=t.subscription_candidate,
+                subscription_id=t.subscription_id,
+            )
+            for t in result
+        ]
+
+        # --- Calculate statistics (amounts converted from cents to dollars) ---
+        amounts_dollars = [abs(t.amount) / 100.0 for t in result]
+        total_spent = sum(amounts_dollars)
+        dates = [t.date for t in result if t.date]
+
+        # Calculate months in the selected range for average
+        if params.from_date and params.to_date:
+            month_diff = (
+                (params.to_date.year - params.from_date.year) * 12
+                + params.to_date.month
+                - params.from_date.month
+            )
+            num_months = max(month_diff, 1)
+        elif dates:
+            min_d = min(dates)
+            max_d = max(dates)
+            month_diff = (
+                (max_d.year - min_d.year) * 12 + max_d.month - min_d.month
+            )
+            num_months = max(month_diff, 1)
+        else:
+            num_months = 1
+
+        average_per_month = round(total_spent / num_months, 2)
+
+        stats = TransactionByNameStatsResponse(
+            total_spent=round(total_spent, 2),
+            average_per_month=average_per_month,
+            max_single_charge=round(max(amounts_dollars), 2) if amounts_dollars else 0.0,
+            min_single_charge=round(min(amounts_dollars), 2) if amounts_dollars else 0.0,
+            last_transaction_date=max(dates) if dates else None,
+            first_transaction_date=min(dates) if dates else None,
+        )
+
+        meta = TransactionByNameMetaResponse(
+            title=result[0].title,
+            period=TransactionByNamePeriodResponse(
+                from_date=params.from_date,
+                to_date=params.to_date,
+            ),
+            total_transactions=len(result),
+        )
+
+        # --- Year-over-year comparison ---
+        year_comparison = None
+        if params.include_year_comparison and params.from_date and params.to_date:
+            prev_from = params.from_date.replace(year=params.from_date.year - 1)
+            prev_to = params.to_date.replace(year=params.to_date.year - 1)
+
+            prev_base = query_service.org_filtered_query(
+                model=Transaction,
+                current_user=current_user,
+            )
+
+            if account_type:
+                prev_base = prev_base.join(
+                    Account, Transaction.account_id == Account.uuid
+                ).where(Account.account_type == account_type)
+
+            prev_stmt = prev_base.where(
+                func.lower(Transaction.title) == title.lower(),
+                Transaction.date >= prev_from,
+                Transaction.date <= prev_to,
+            )
+
+            prev_result = (await db.execute(prev_stmt)).scalars().all()
+            prev_total = sum(abs(t.amount) / 100.0 for t in prev_result)
+
+            current_total = total_spent
+            difference = round(current_total - prev_total, 2)
+            percentage_change = (
+                round((difference / prev_total) * 100, 1) if prev_total > 0 else 0.0
+            )
+
+            year_comparison = TransactionByNameYearComparisonResponse(
+                current_year_total=round(current_total, 2),
+                previous_year_total=round(prev_total, 2),
+                difference=difference,
+                percentage_change=percentage_change,
+            )
+
+        return TransactionsByNameResponse(
+            meta=meta,
+            stats=stats,
+            year_comparison=year_comparison,
+            transactions=transactions,
+        )
+
+    except HTTPException:
+        raise
+    except SQLAlchemyError:
+        await db.rollback()
+        raise HTTPException(500, "Database error while retrieving transactions")
+    except Exception:
+        await db.rollback()
+        raise HTTPException(500, "Failed to retrieve transactions by name")
 
 
 @transaction_router.get(
