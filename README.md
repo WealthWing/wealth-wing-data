@@ -19,22 +19,32 @@ Async stack with PostgreSQL (`asyncpg`), SQLAlchemy 2.0, Alembic, and Uvicorn. O
    cd wealth-wing-data
    ```
 
-2. **Copy and edit the `.env` file:**
-   - Set your secrets and database URL as needed. Example:
-     ```env
-     DB_URL=postgresql+asyncpg://amin:123123@postgres:5432/ww-db
-     ```
+2. **Create your local environment file:**
+   ```sh
+   cp .env.example .env
+   ```
+   For Docker Compose, keep `DB_URL` pointed at the Compose service host:
+   ```env
+   DB_URL=postgresql+asyncpg://ed:123123@postgres:5432/ww-db
+   ```
 
 3. **Start the backend and database:**
    ```sh
-   docker-compose up --build
+   docker compose up --build
    ```
    - The API will be available at [http://localhost:5003/docs](http://localhost:5003/docs)
-   - The database will be available on port 5434 (for local tools like DBeaver)
+   - Health check: [http://localhost:5003/health/ping](http://localhost:5003/health/ping)
+   - Postgres will be available on `localhost:5435` for local tools
 
 4. **Stop the services:**
    ```sh
-   docker-compose down
+   docker compose down
+   ```
+
+5. **Run one-off commands in the API container:**
+   ```sh
+   docker compose run --rm api alembic current
+   docker compose run --rm api alembic upgrade head
    ```
 
 ---
@@ -57,7 +67,7 @@ Async stack with PostgreSQL (`asyncpg`), SQLAlchemy 2.0, Alembic, and Uvicorn. O
    - See [documentation/DOCKER.md](documentation/DOCKER.md) for details.
    - Example connection string for local dev:
      ```env
-     DB_URL=postgresql+asyncpg://admin:123123@localhost:5434/ww-db
+     DB_URL=postgresql+asyncpg://ed:123123@localhost:5435/ww-db
      ```
 
 4. **Run database migrations:**
@@ -67,7 +77,7 @@ Async stack with PostgreSQL (`asyncpg`), SQLAlchemy 2.0, Alembic, and Uvicorn. O
 
 5. **Start the server:**
    ```sh
-   uvicorn src.main:api --reload --port 5003
+   uvicorn main:app --reload --port 5003 --env-file .env
    ```
    - Visit [http://localhost:5003/docs](http://localhost:5003/docs) for the API docs.
 
@@ -126,7 +136,7 @@ alembic current             # show current DB revision
 alembic stamp head          # mark DB as up-to-date without running scripts
 ```
 
-When running inside Docker Compose, set DB_URL to the service connection string (see Quick Start sample .env).
+When running inside Docker Compose, set `DB_URL` to the service connection string from `.env.example`.
 
 Heroku
 Heroku provides a DATABASE_URL env var by default. If your app expects `DB_URL`, map it to `DATABASE_URL` and then run Alembic on the Heroku dyno:
@@ -173,6 +183,4 @@ git push heroku main
 - git add .
 - git commit -am "make it better"
 - git push heroku main
-
-
 

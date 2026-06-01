@@ -25,7 +25,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/docs",
             "/redoc",
             "/openapi.json",
-            "/secure-endpoint" "/health",
+            "/secure-endpoint",
+            "/health",
         ]
 
         # Allow access to public paths

@@ -14,10 +14,6 @@ build/
 .pytest_cache/
 coverage/
 .gitignore
-Dockerfile
-docker-compose*.yml
-.env
-.env.*
 .vscode
 .idea
 .mypy_cache/
@@ -26,3 +22,5 @@ dist/
 build/
 node_modules/
 .venv/
+venv/
+plans/
