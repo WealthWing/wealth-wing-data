@@ -107,8 +107,10 @@ async def get_transactions(
 
     transactions = [
         TransactionResponse(
+            account_id=t.account_id,
             account_name=(t.account.account_name if t.account else None),
             category=(t.category.title if t.category else None),
+            project_id=t.project_id,
             uuid=t.uuid,
             title=t.title,
             amount=t.amount,
@@ -294,7 +296,9 @@ async def get_subscription_candidates(
         return [
             SubscriptionCandidateResponse(
                 account_name=(t.account.account_name if t.account else None),
+                account_id=t.account_id,
                 category=(t.category.title if t.category else None),
+                project_id=t.project_id,
                 uuid=t.uuid,
                 title=t.title,
                 amount=t.amount,
@@ -530,8 +534,10 @@ async def get_transaction_by_id(
         raise HTTPException(404, "Transaction not found")
 
     return TransactionResponse(
+        account_id=transaction.account_id,
         account_name=(transaction.account.account_name if transaction.account else None),
         category=(transaction.category.title if transaction.category else None),  
+        project_id=transaction.project_id,
         uuid=transaction.uuid,
         title=transaction.title,
         amount=transaction.amount,
@@ -600,6 +606,3 @@ async def update_transaction_subscription(
     except Exception:
         await db.rollback()
         raise HTTPException(500, "Failed to update transaction subscription")
-    
-    
-    

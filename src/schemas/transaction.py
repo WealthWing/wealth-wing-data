@@ -6,25 +6,27 @@ from datetime import datetime
 
 class TransactionBase(BaseModel):
     category_id: UUID
+    account_id: Optional[UUID] = None
+    project_id: Optional[UUID] = None
     title: str
     amount: int
     description: Optional[str] = None
     date: Optional[datetime] = None
-    currency: Optional[str] = None
-    type: Optional[str] = "N/A"
-    category: Optional[str] = None
-    account_name: Optional[str] = None
+    currency: Optional[str] = "USD"
+    type: Optional[str] = "expense"
     subscription_candidate: bool = False
     subscription_id: Optional[UUID] = None
 
 
 class TransactionCreate(TransactionBase):
-    pass
+    account_id: UUID
 
 
 class TransactionResponse(TransactionBase):
     uuid: UUID
     user_id: UUID
+    category: Optional[str] = None
+    account_name: Optional[str] = None
 
     class Config:
         from_attributes = True

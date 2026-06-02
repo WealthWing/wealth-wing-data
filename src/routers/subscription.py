@@ -206,8 +206,10 @@ async def get_subscription_transactions(
 
     transaction_list = [
         TransactionResponse(
+            account_id=t.account_id,
             account_name=(t.account.account_name if t.account else None),
             category=(t.category.title if t.category else None),
+            project_id=t.project_id,
             uuid=t.uuid,
             title=t.title,
             amount=t.amount,

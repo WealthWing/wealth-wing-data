@@ -184,3 +184,24 @@ git push heroku main
 - git commit -am "make it better"
 - git push heroku main
 
+## Seed Demo Data
+
+After configuring `DB_URL` and applying migrations, seed demo data for an
+existing organization and user:
+
+```bash
+python3 scripts/seed_demo_data.py --organization-id <org-uuid> --user-id <user-uuid>
+```
+
+The seeder validates that the user belongs to the given organization, then creates
+or reuses categories, checking and credit card accounts, a subscription, and
+account-linked transactions. It seeds 25 Faker-generated transactions per month
+using the same category resolution helper used by CSV imports. Faker is seeded
+from the organization, user, and row position, so reruns generate the same
+fingerprints and skip existing transactions.
+
+Useful options:
+
+```bash
+python3 scripts/seed_demo_data.py --organization-id <org-uuid> --user-id <user-uuid> --months 12
+```
