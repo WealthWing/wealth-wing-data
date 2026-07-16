@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import List
 from fastapi import HTTPException
 from sqlalchemy import Select, and_, desc, or_
+from sqlalchemy import String as SAString
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from src.model.param_models import StandardParams, FilterByInputs
 
 
@@ -57,6 +59,16 @@ class ParamsService:
 
         return stmt.offset(offset).limit(page_size)
 
+    def _is_string_column(self, column_attr) -> bool:
+        """Return True if the column stores string-like values suitable for LIKE."""
+        try:
+            col_type = column_attr.property.columns[0].type
+        except Exception:
+            return False
+        return isinstance(col_type, (SAString, PGUUID)) is False or isinstance(
+            col_type, SAString
+        )
+
     def apply_filter(
         self, stmt: Select, model, filters: List[FilterByInputs]
     ) -> Select:
@@ -66,11 +78,14 @@ class ParamsService:
             or_clauses = []
             column_attr = getattr(model, filter.field_name, None)
             if column_attr is not None:
+                use_like = self._is_string_column(column_attr)
                 for val in filter.values:
                     if not val or str(val).lower() == "null":
                         or_clauses.append(column_attr.is_(None))
-                    else:
+                    elif use_like:
                         or_clauses.append(column_attr.like(f"%{val}%"))
+                    else:
+                        or_clauses.append(column_attr == val)
             elif filter.field_name == "owned":
                 or_clauses.append(model.owner_id.is_(filter.values[0]))
 

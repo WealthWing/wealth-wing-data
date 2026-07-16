@@ -111,10 +111,18 @@ Always create migrations for schema changes:
 # 1. Update model in src/model/models.py
 # 2. Generate migration
 alembic revision --autogenerate -m "Description of change"
-# 3. Review migration script (alembic/versions/*.py)
-# 4. Apply migration
+# 3. Inspect and summarize the generated migration (alembic/versions/*.py)
+# 4. Request explicit human review and approval, then stop
+# 5. Only after human approval, apply the migration
 alembic upgrade head
 ```
+
+**Human review gate (mandatory):** Every new or modified Alembic migration must
+be reviewed and explicitly approved by a human. Agent or automated review does
+not satisfy this requirement. An agent may create, edit, and statically inspect
+the migration, but must not run `alembic upgrade head`, deploy it, or treat the
+migration work as complete until human approval is received.
+
 Don't skip migrations; they're auditable and required for deployments.
 
 ### Testing Changes Locally
@@ -167,6 +175,7 @@ Critical rules:
 - Use QueryService for org scoping
 - Preserve fingerprint dedup
 - Require Alembic migrations for schema changes
+- Require explicit human review before applying any new or modified migration
 
 ## Important Notes:
 - Wen defining shema models using pydantic always make sure you label at the end if it is Request or Response model. This is important for readability and maintainability of the codebase. For example, if you are defining a schema for creating a transaction, you should name it `TransactionCreateRequest` to indicate that it is a request model. Similarly, if you are defining a schema for returning transaction data, you should name it `TransactionResponse` to indicate that it is a response model. This naming convention helps other developers understand the purpose of each schema at a glance and promotes consistency throughout the codebase.

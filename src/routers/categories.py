@@ -1,13 +1,17 @@
 from typing import List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from src.model.models import Category
 from src.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 from src.database.connect import DBSession
 from sqlalchemy import select
 
+from src.util.types import UserPool
+from src.util.user import get_current_user
+
 category_router = APIRouter()
 
 # TODO - add permissions and user association to categories
+
 
 @category_router.post("/create", status_code=201, response_model=CategoryResponse)
 async def create_category(category_data: CategoryCreate, db: DBSession):
@@ -75,3 +79,26 @@ async def update_category(
         raise HTTPException(status_code=500, detail=f"Failed to update category: {e}")
 
     return category_model
+
+
+#@category_router.post("/spending_by_category", status_code=200)
+#async def get_spending_by_category(
+#    db: DBSession,
+#    current_user: UserPool = Depends(get_current_user),
+#    query_service: QueryService = Depends(get_query_service),
+#    params_service: ParamsService = Depends(ParamsService)
+#):
+#    try:
+#        stmt = select(Category)#
+
+#        result = await db.execute(stmt)
+#        categories = result.scalars().all()#
+
+#        if not categories:
+#            raise HTTPException(status_code=404, detail="No categories found")#
+
+#        return categories
+#    except Exception as e:
+#        raise HTTPException(
+#            status_code=500, detail=f"Failed to get spending by category: {e}"
+#        )

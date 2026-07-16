@@ -45,7 +45,7 @@ async def create_transaction(
     return await create_transaction_in_db(transaction_data, db, current_user.sub)
 
 
-@transaction_router.get("/")
+
 
 
 @transaction_router.get("/all", status_code=200, response_model=TransactionsAllResponse)
@@ -78,6 +78,8 @@ async def get_transactions(
         date_field="date",
         search_fields=["title", "type"],
     )
+    
+    print(filtered_stmt, "Filtered Statement")  # Debugging line to check the generated SQL statement
 
     transactions = await db.execute(filtered_stmt)
     result = transactions.scalars().all()
