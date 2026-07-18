@@ -1,11 +1,13 @@
-import datetime
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, case, select
+
+from uuid import UUID
+from typing_extensions import Annotated
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, case, select, and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 from src.schemas.user import Perm
 from src.model.param_models import TransactionsParams, TransactionByNameParams
 from src.services.params import ParamsService
-from src.model.models import Transaction, Account, AccountTypeEnum, Subscription
+from src.model.models import Transaction, Account, AccountTypeEnum, Subscription, Category
 from src.schemas.transaction import (
     TransactionCreate,
     TransactionResponse,
@@ -13,12 +15,15 @@ from src.schemas.transaction import (
     TransactionSummaryResponse,
     TransactionUpdateSubscriptionRequest,
     TransactionsAllResponse,
+    TransactionsAllRequest,
     TransactionUpdateSubscriptionResponse,
     TransactionsByNameResponse,
     TransactionByNameMetaResponse,
     TransactionByNamePeriodResponse,
     TransactionByNameStatsResponse,
     TransactionByNameYearComparisonResponse,
+    CashFlowHistoryRequest,
+    CashFlowHistoryResponse,
 )
 from collections import defaultdict
 from typing import Optional
@@ -28,8 +33,47 @@ from src.util.user import get_current_user, has_permission
 from src.util.transaction import create_transaction_in_db
 from src.services.query_service import get_query_service, QueryService
 from src.services.subscription_candidate_service import infer_frequency
+from src.services.cash_flow_history import get_cash_flow_history
 
 transaction_router = APIRouter()
+
+
+@transaction_router.get(
+    "/cash-flow-history", status_code=200, response_model=CashFlowHistoryResponse
+)
+async def cash_flow_history(
+    db: DBSession,
+    request: Annotated[CashFlowHistoryRequest, Query()],
+    current_user: UserPool = Depends(get_current_user),
+    query_service: QueryService = Depends(get_query_service),
+):
+    """Return zero-filled cash-flow periods for the authenticated organization.
+
+    The service aggregates income, expenses, and refunds using the configured
+    user or organization timezone before returning the periods. The frontend
+    should use the response ``timezone`` and timezone-aware period boundaries
+    for labels; it should not re-bucket the returned data in browser UTC.
+
+    Args:
+        db: Async database session used to load timezone settings and query
+            organization-scoped transactions.
+        request: Date range, granularity, and optional account, category, or
+            project filters.
+        current_user: Authenticated user and organization context.
+        query_service: Query builder that enforces organization isolation.
+
+    Returns:
+        Cash-flow totals and zero-filled periods validated by the response
+        model.
+
+    Raises:
+        HTTPException: If the user lacks read permission or is not associated
+            with an organization.
+    """
+
+    if not has_permission(current_user, Perm.READ):
+        raise HTTPException(403, "User does not have permission to view transactions")
+    return await get_cash_flow_history(db, current_user, query_service, request)
 
 
 @transaction_router.post("/create", status_code=200, response_model=TransactionResponse)
@@ -38,6 +82,24 @@ async def create_transaction(
     db: DBSession,
     current_user: UserPool = Depends(get_current_user),
 ):
+    """Create one transaction for the authenticated user.
+
+    Request validation is handled by ``TransactionCreate``. Persistence and
+    transaction-specific rules, including amount/date normalization and
+    fingerprint-based deduplication, remain in the service layer rather than
+    in the router.
+
+    Args:
+        transaction_data: Validated transaction fields supplied by the client.
+        db: Async database session used to persist the transaction.
+        current_user: Authenticated user whose ID owns the new transaction.
+
+    Returns:
+        The created transaction serialized as ``TransactionResponse``.
+
+    Raises:
+        HTTPException: If the user lacks write permission.
+    """
     if not has_permission(current_user, Perm.WRITE):
         raise HTTPException(
             403, "User does not have permission to create organizations"
@@ -45,18 +107,39 @@ async def create_transaction(
     return await create_transaction_in_db(transaction_data, db, current_user.sub)
 
 
-
-
-
 @transaction_router.get("/all", status_code=200, response_model=TransactionsAllResponse)
 async def get_transactions(
     db: DBSession,
+    transaction_filters: Annotated[TransactionsAllRequest, Query()],
     current_user: UserPool = Depends(get_current_user),
     params: TransactionsParams = Depends(),
     params_service: ParamsService = Depends(ParamsService),
     query_service: QueryService = Depends(get_query_service),
-    account_type: Optional[AccountTypeEnum] = None,
 ):
+    """List organization-scoped transactions with filtering and pagination.
+
+    Filters are combined across dimensions, while IDs and names within the
+    same dimension use OR semantics. Date, search, sorting, pagination, and
+    count handling are delegated to ``ParamsService``. All database access is
+    asynchronous and the query remains organization-scoped through
+    ``QueryService``.
+
+    Args:
+        db: Async database session used to execute the filtered query.
+        transaction_filters: Optional category, account, merchant, amount,
+            and transaction-type filters from the query string.
+        current_user: Authenticated user and organization context.
+        params: Shared date, search, sort, and pagination parameters.
+        params_service: Applies shared query-processing behavior.
+        query_service: Builds the organization-scoped base query.
+
+    Returns:
+        A paginated ``TransactionsAllResponse`` containing transaction
+        response models and pagination metadata.
+
+    Raises:
+        HTTPException: If the user lacks read permission.
+    """
     if not has_permission(current_user, Perm.READ):
         raise HTTPException(403, "User does not have permission to view transactions")
     base_stmt = query_service.org_filtered_query(
@@ -65,11 +148,82 @@ async def get_transactions(
         category_attr="category",
         current_user=current_user,
     )
-    
-    account_filter = account_type if account_type else AccountTypeEnum.CHECKING
-    base_stmt = base_stmt.join(Account, Transaction.account_id == Account.uuid).where(
-        Account.account_type == account_filter
-    )   
+
+    amount_magnitude = func.abs(Transaction.amount)
+
+    if transaction_filters.minimum_amount_cents is not None:
+        base_stmt = base_stmt.where(
+            amount_magnitude >= transaction_filters.minimum_amount_cents
+        )
+    if transaction_filters.maximum_amount_cents is not None:
+        base_stmt = base_stmt.where(
+            amount_magnitude <= transaction_filters.maximum_amount_cents
+        )
+
+    if transaction_filters.account_type:
+        base_stmt = base_stmt.join(
+            Account, Transaction.account_id == Account.uuid
+        ).where(Account.account_type == transaction_filters.account_type)
+    else:
+        base_stmt = base_stmt.join(Account, Transaction.account_id == Account.uuid)
+
+    # --- New purpose-built filters -----------------------------------------
+    filter_conditions = []
+
+    # Category dimension: IDs OR names (case-insensitive exact names)
+    category_conditions = []
+    if transaction_filters.category_ids:
+        category_conditions.append(
+            Transaction.category_id.in_(transaction_filters.category_ids)
+        )
+    if transaction_filters.category_names:
+        normalized_cat_names = [
+            name.lower() for name in transaction_filters.category_names if name
+        ]
+        if normalized_cat_names:
+            category_conditions.append(
+                func.lower(Category.title).in_(normalized_cat_names)
+            )
+    if category_conditions:
+        filter_conditions.append(or_(*category_conditions))
+        base_stmt = base_stmt.join(
+            Category, Transaction.category_id == Category.uuid
+        )
+
+    # Account dimension: IDs OR names (case-insensitive exact names)
+    account_conditions = []
+    if transaction_filters.account_ids:
+        account_conditions.append(
+            Transaction.account_id.in_(transaction_filters.account_ids)
+        )
+    if transaction_filters.account_names:
+        normalized_acct_names = [
+            name.lower() for name in transaction_filters.account_names if name
+        ]
+        if normalized_acct_names:
+            account_conditions.append(
+                func.lower(Account.account_name).in_(normalized_acct_names)
+            )
+    if account_conditions:
+        filter_conditions.append(or_(*account_conditions))
+
+    # Merchant search: case-insensitive partial match on title
+    merchant_search = (transaction_filters.merchant_search or "").strip()
+    if merchant_search:
+        filter_conditions.append(Transaction.title.ilike(f"%{merchant_search}%"))
+
+    # Transaction types: exact membership
+    if transaction_filters.transaction_types:
+        filter_conditions.append(
+            Transaction.type.in_(transaction_filters.transaction_types)
+        )
+
+    if filter_conditions:
+        base_stmt = base_stmt.where(and_(*filter_conditions))
+
+    # Prevent duplicate rows from relationship joins
+    base_stmt = base_stmt.distinct()
+    # ------------------------------------------------------------------------
 
     filtered_stmt = params_service.process_query(
         stmt=base_stmt,
@@ -78,8 +232,6 @@ async def get_transactions(
         date_field="date",
         search_fields=["title", "type"],
     )
-    
-    print(filtered_stmt, "Filtered Statement")  # Debugging line to check the generated SQL statement
 
     transactions = await db.execute(filtered_stmt)
     result = transactions.scalars().all()

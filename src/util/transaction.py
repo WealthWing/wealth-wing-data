@@ -238,7 +238,7 @@ def get_internal_type(type, description):
 
 credit_card_internal_types = {
     "Sale": "expense",
-    "Refund": "income",
+    "Refund": "refund",
     "Payment": "payment",
     "Adjustment": "adjustment",
 }

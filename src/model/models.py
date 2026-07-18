@@ -33,6 +33,7 @@ class Organization(Base):
 
     uuid = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     name = Column(String(255), nullable=False, unique=True)
+    timezone = Column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), insert_default=utc_now, nullable=False
     )
@@ -80,6 +81,7 @@ class User(Base):
     email: str = Column(String, unique=True, nullable=False, index=True)
     name: str = Column(String)
     last_name: str = Column(String)
+    timezone = Column(String(64), nullable=True)
     role: UserRole = Column(Enum(UserRole, name="user_role"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), insert_default=utc_now, nullable=False

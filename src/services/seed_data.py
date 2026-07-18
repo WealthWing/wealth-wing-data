@@ -532,7 +532,7 @@ def _internal_type_from_seed_type(seed_type: str) -> str:
         "DEBIT": "expense",
         "ACH_DEBIT": "expense",
         "Sale": "expense",
-        "Refund": "income",
+        "Refund": "refund",
         "Payment": "payment",
         "Adjustment": "adjustment",
     }.get(seed_type, "unknown")
