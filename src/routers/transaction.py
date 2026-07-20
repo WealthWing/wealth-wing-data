@@ -2,7 +2,7 @@
 from uuid import UUID
 from typing_extensions import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, case, select, and_, or_
+from sqlalchemy import func, select, and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 from src.schemas.user import Perm
 from src.model.param_models import TransactionsParams, TransactionByNameParams
@@ -12,6 +12,7 @@ from src.schemas.transaction import (
     TransactionCreate,
     TransactionResponse,
     SubscriptionCandidateResponse,
+    TransactionSummaryRequest,
     TransactionSummaryResponse,
     TransactionUpdateSubscriptionRequest,
     TransactionsAllResponse,
@@ -34,6 +35,7 @@ from src.util.transaction import create_transaction_in_db
 from src.services.query_service import get_query_service, QueryService
 from src.services.subscription_candidate_service import infer_frequency
 from src.services.cash_flow_history import get_cash_flow_history
+from src.services.transaction_summary import build_transaction_summary
 
 transaction_router = APIRouter()
 
@@ -293,115 +295,19 @@ async def get_transactions(
 )
 async def get_transaction_summary(
     db: DBSession,
-    params: TransactionsParams = Depends(),
+    request: Annotated[TransactionSummaryRequest, Query()],
     current_user: UserPool = Depends(get_current_user),
-    params_service: ParamsService = Depends(ParamsService),
     query_service: QueryService = Depends(get_query_service),
-):
-    """
-    Endpoint to retrieve a summary of transactions for the current user.
-
-    This endpoint returns both overall totals and monthly breakdowns of income and expenses
-    for transactions filtered by the provided parameters. Only transactions associated with
-    checking accounts are considered.
-
-    Args:
-        db (DBSession): Database session dependency.
-        params (TransactionsParams): Query parameters for filtering transactions.
-        current_user (UserPool): The currently authenticated user.
-        params_service (ParamsService): Service for processing query parameters.
-        query_service (QueryService): Service for building filtered queries.
-
-    Returns:
-        dict: A dictionary containing:
-            - "totals": Overall totals for money in, money out, and net amount.
-            - "months": List of monthly summaries, each with month, income, expense, and net.
-
-    Raises:
-        HTTPException: If authentication fails or database errors occur.
-    """
+) -> TransactionSummaryResponse:
+    """Return an organization-scoped transaction summary for a date range."""
     if not has_permission(current_user, Perm.READ):
         raise HTTPException(403, "User does not have permission to view transactions")
-
-    base_stmt = query_service.org_filtered_query(
-        model=Transaction, current_user=current_user
+    return await build_transaction_summary(
+        db=db,
+        current_user=current_user,
+        query_service=query_service,
+        request=request,
     )
-
-    filtered_stmt = params_service.process_query(
-        stmt=base_stmt,
-        params=params,
-        model=Transaction,
-        date_field="date",
-        search_fields=["title", "type"],
-    )
-
-    subq = (
-        filtered_stmt.join(Account, Transaction.account_id == Account.uuid)
-        .where(Account.account_type == AccountTypeEnum.CHECKING)
-        .with_only_columns(
-            Transaction.date,
-            Transaction.type,
-            Transaction.amount,
-        )
-        .subquery()
-    )
-
-    # ------- Totals (In / Out) -------
-    totals_stmt = select(
-        func.coalesce(
-            func.sum(case((subq.c.type == "income", subq.c.amount), else_=0)), 0
-        ).label("total_in"),
-        func.coalesce(
-            func.sum(case((subq.c.type == "expense", subq.c.amount), else_=0)), 0
-        ).label("total_out"),
-    )
-
-    # ------- Monthly buckets -------
-    month_col = func.date_trunc("month", subq.c.date).label("month")
-    months_stmt = (
-        select(
-            month_col,
-            func.coalesce(
-                func.sum(case((subq.c.type == "income", subq.c.amount), else_=0)), 0
-            ).label("income"),
-            func.coalesce(
-                func.sum(case((subq.c.type == "expense", subq.c.amount), else_=0)), 0
-            ).label("expense"),
-        )
-        .group_by(month_col)
-        .order_by(month_col)
-    )
-
-    totals_res = await db.execute(totals_stmt)
-    months_res = await db.execute(months_stmt)
-
-    totals = totals_res.one()
-    total_in = int(totals.total_in or 0)
-    total_out = int(totals.total_out or 0)
-
-    months = []
-    for m, income, expense in months_res.all():
-        income = int(income or 0)
-        expense = int(expense or 0)
-
-        months.append(
-            {
-                "month": (m.date() if hasattr(m, "date") else m),
-                "income": income,
-                "expense": expense,
-                "net": income - abs(expense),
-            }
-        )
-
-    return {
-        "totals": {
-            "income": total_in,
-            "expense": total_out,
-            "net": total_in - abs(total_out),
-            "average_monthly_spent": total_out // len(months) if months else 0,
-        },
-        "months": months,
-    }
 
 
 @transaction_router.get(

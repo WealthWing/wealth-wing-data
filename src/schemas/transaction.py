@@ -1,6 +1,6 @@
-from typing import Optional, List
+from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import date, datetime
 from typing import Literal
 
@@ -96,26 +96,45 @@ class TransactionsAllResponse(BaseModel):
         from_attributes = True
 
 
-class TransactionMonths(BaseModel):
-    month: datetime
-    income: int
-    expense: int
-    net: int
+class TransactionSummaryRequest(BaseModel):
+    from_date: date
+    to_date: date
+    account_types: list[AccountTypeEnum] = Field(
+        default_factory=lambda: [
+            AccountTypeEnum.CHECKING,
+            AccountTypeEnum.CREDIT_CARD,
+        ],
+        min_length=1,
+    )
 
+    @field_validator("account_types")
+    @classmethod
+    def deduplicate_account_types(
+        cls, value: list[AccountTypeEnum]
+    ) -> list[AccountTypeEnum]:
+        return list(dict.fromkeys(value))
 
-class TransactionTotals(BaseModel):
-    income: int
-    expense: int
-    net: int
-    average_monthly_spent: float
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "TransactionSummaryRequest":
+        if self.from_date > self.to_date:
+            raise ValueError("from_date cannot be after to_date")
+        return self
 
 
 class TransactionSummaryResponse(BaseModel):
-    totals: TransactionTotals
-    months: List[TransactionMonths]
-
-    class Config:
-        from_attributes = True
+    gross_expense: int
+    refunds: int
+    net_spending: int
+    income: int
+    net_activity: int
+    expense_transaction_count: int
+    refund_transaction_count: int
+    income_transaction_count: int
+    average_expense: float
+    average_monthly_spending: float
+    from_date: date
+    to_date: date
+    included_account_types: list[AccountTypeEnum]
 
 
 class CashFlowHistoryRequest(BaseModel):

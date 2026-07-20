@@ -26,7 +26,9 @@ def _valid_zone(name: str | None) -> tuple[ZoneInfo, str] | None:
     return zone, name
 
 
-async def _effective_timezone(db: DBSession, current_user: UserPool) -> tuple[ZoneInfo, str]:
+async def get_effective_timezone(
+    db: DBSession, current_user: UserPool
+) -> tuple[ZoneInfo, str]:
     user = await db.scalar(select(User).where(User.uuid == current_user.sub))
     organization = None
     if user and user.organization_id:
@@ -66,7 +68,7 @@ async def get_cash_flow_history(
     if not current_user.organization_id:
         raise HTTPException(403, "User does not belong to an organization")
 
-    zone, timezone_name = await _effective_timezone(db, current_user)
+    zone, timezone_name = await get_effective_timezone(db, current_user)
     local_start = datetime.combine(request.from_date, time.min, tzinfo=zone)
     local_end = datetime.combine(
         request.to_date + timedelta(days=1), time.min, tzinfo=zone
