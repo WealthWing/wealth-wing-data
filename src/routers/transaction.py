@@ -322,6 +322,32 @@ async def get_subscription_candidates(
     account_type: Optional[AccountTypeEnum] = None,
     limit: int = 100,
 ):
+    """List the latest distinct subscription-candidate transactions.
+
+    The query is scoped to the authenticated organization and includes only
+    transactions previously marked as subscription candidates. Results can be
+    restricted to one account type. The requested limit is clamped to the
+    inclusive range 1-500 before querying, then transactions are grouped by
+    exact title so each response item represents the newest matching
+    transaction. Its frequency is inferred from the candidate transaction
+    dates returned for that title.
+
+    Args:
+        db: Async database session used to retrieve candidate transactions.
+        current_user: Authenticated user and organization context.
+        query_service: Query builder that enforces organization isolation.
+        account_type: Optional account type used to restrict candidates.
+        limit: Maximum candidate transactions to inspect before title
+            deduplication; clamped from 1 through 500.
+
+    Returns:
+        One ``SubscriptionCandidateResponse`` per distinct candidate title,
+        ordered by the newest transaction for each title.
+
+    Raises:
+        HTTPException: If the user lacks read permission or candidate
+            retrieval fails.
+    """
     if not has_permission(current_user, Perm.READ):
         raise HTTPException(403, "User does not have permission to view transactions")
 
