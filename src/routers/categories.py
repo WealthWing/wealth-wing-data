@@ -1,8 +1,8 @@
 import logging
-from typing import List
+from typing import Annotated, List
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.database.connect import DBSession
@@ -101,7 +101,7 @@ async def update_category(
 )
 async def get_spending_by_category(
     db: DBSession,
-    params: CategorySpendingParams = Depends(),
+    params: Annotated[CategorySpendingParams, Query()],
     current_user: UserPool = Depends(get_current_user),
     params_service: ParamsService = Depends(ParamsService),
     query_service: QueryService = Depends(get_query_service),
@@ -127,6 +127,23 @@ async def get_spending_by_category(
         stmt = params_service.apply_date_filter(
             stmt, Transaction, params.from_date, params.to_date, "date"
         ).where(Transaction.type == "expense")
+
+        # Category dimension: IDs OR names (case-insensitive exact names)
+        category_conditions = []
+        if params.category_ids:
+            category_conditions.append(
+                Transaction.category_id.in_(params.category_ids)
+            )
+        if params.category_names:
+            normalized_cat_names = [
+                name.lower() for name in params.category_names if name
+            ]
+            if normalized_cat_names:
+                category_conditions.append(
+                    func.lower(Category.title).in_(normalized_cat_names)
+                )
+        if category_conditions:
+            stmt = stmt.where(or_(*category_conditions))
 
         stmt = (
             stmt.with_only_columns(

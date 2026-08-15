@@ -1,6 +1,7 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from json import JSONDecodeError
 from typing import Any, List, Literal, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, BeforeValidator, Field, field_validator
 from pydantic_core import from_json
@@ -86,15 +87,12 @@ class TransactionByNameParams(StandardParams):
 
 
 class CategorySpendingParams(BaseModel):
-    from_date: Optional[datetime] = Field(
+    from_date: Optional[date] = Field(
         None, description="Start date for filtering, as a timestamp or ISO 8601 string."
     )
-    to_date: Optional[datetime] = Field(
+    to_date: Optional[date] = Field(
         None, description="End date for filtering, as a timestamp or ISO 8601 string."
     )
+    category_ids: Optional[list[UUID]] = None
+    category_names: Optional[list[str]] = None
 
-    @field_validator("from_date", "to_date")
-    def validate_dates(cls, value: Optional[datetime]) -> Optional[datetime]:
-        if value and value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
-        return value
