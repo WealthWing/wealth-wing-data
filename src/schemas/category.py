@@ -26,7 +26,14 @@ class CategoryResponse(CategoryBase):
         from_attributes = True
 
 
-class CategorySpendingResponse(BaseModel):
+class CategorySpendingItemResponse(BaseModel):
     category_id: UUID
     category: str
     expense: int
+    transaction_count: int
+
+
+class CategorySpendingResponse(BaseModel):
+    spending_by_categories: list[CategorySpendingItemResponse]
+    total_spending_by_category: int
+    transaction_count: int

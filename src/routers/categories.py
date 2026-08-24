@@ -10,6 +10,7 @@ from src.model.models import Category, Transaction
 from src.schemas.category import (
     CategoryCreate,
     CategoryResponse,
+    CategorySpendingItemResponse,
     CategorySpendingResponse,
     CategoryUpdate,
 )
@@ -97,7 +98,7 @@ async def update_category(
 @category_router.post(
     "/spending_by_category",
     status_code=200,
-    response_model=list[CategorySpendingResponse],
+    response_model=CategorySpendingResponse,
 )
 async def get_spending_by_category(
     db: DBSession,
@@ -119,6 +120,7 @@ async def get_spending_by_category(
 
     try:
         expense_total = func.coalesce(func.sum(Transaction.amount), 0)
+        transaction_count = func.count(Transaction.uuid)
         stmt = query_service.org_filtered_query(
             model=Transaction,
             current_user=current_user,
@@ -150,20 +152,31 @@ async def get_spending_by_category(
                 Category.uuid.label("category_id"),
                 Category.title.label("category"),
                 expense_total.label("expense"),
+                transaction_count.label("transaction_count"),
             )
             .group_by(Category.uuid, Category.title)
             .order_by(func.abs(expense_total).desc(), Category.title.asc())
         )
 
         result = await db.execute(stmt)
-        return [
-            CategorySpendingResponse(
+        spending_by_categories = [
+            CategorySpendingItemResponse(
                 category_id=row.category_id,
                 category=row.category,
                 expense=int(row.expense or 0),
+                transaction_count=int(row.transaction_count or 0),
             )
             for row in result.all()
         ]
+        return CategorySpendingResponse(
+            spending_by_categories=spending_by_categories,
+            total_spending_by_category=sum(
+                item.expense for item in spending_by_categories
+            ),
+            transaction_count=sum(
+                item.transaction_count for item in spending_by_categories
+            ),
+        )
     except SQLAlchemyError as exc:
         await db.rollback()
         logger.exception("Failed to retrieve spending by category")
