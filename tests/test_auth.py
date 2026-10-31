@@ -43,6 +43,10 @@ class LocalSwaggerAuthTests(IsolatedAsyncioTestCase):
 
         self.app.dependency_overrides[get_db] = override_db
 
+        @self.app.get("/health/ping")
+        async def ping() -> dict:
+            return {"message": "healthy"}
+
         @self.app.get("/private")
         async def private(
             current_user: Annotated[UserPool, Depends(get_current_user)],
@@ -99,6 +103,88 @@ class LocalSwaggerAuthTests(IsolatedAsyncioTestCase):
 
     async def test_bypass_is_disabled_without_a_configured_user(self):
         with patch.dict(os.environ, {"LOCAL_SWAGGER_USER_ID": ""}):
+            response = await self.request(
+                headers={"Referer": "http://localhost:5003/docs"}
+            )
+
+        self.assertEqual(response.status_code, 401)
+        self.db.execute.assert_not_awaited()
+
+    async def test_malformed_user_id_does_not_break_docs_or_health(self):
+        with (
+            patch.dict(os.environ, {"LOCAL_SWAGGER_USER_ID": "<existing-user-uuid>"}),
+            self.assertLogs("src.middleware.auth", level="WARNING"),
+        ):
+            for path in ("/docs", "/openapi.json", "/health/ping"):
+                with self.subTest(path=path):
+                    response = await self.request(path=path)
+                    self.assertEqual(response.status_code, 200)
+
+        self.db.execute.assert_not_awaited()
+
+    async def test_malformed_user_id_returns_a_clear_error_for_local_swagger(self):
+        with (
+            patch.dict(os.environ, {"LOCAL_SWAGGER_USER_ID": "<existing-user-uuid>"}),
+            self.assertLogs("src.middleware.auth", level="WARNING"),
+        ):
+            response = await self.request(
+                headers={"Referer": "http://localhost:5003/docs"}
+            )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("LOCAL_SWAGGER_USER_ID", response.json()["detail"])
+        self.assertIn("valid UUID", response.json()["detail"])
+        self.db.execute.assert_not_awaited()
+
+    async def test_malformed_user_id_does_not_bypass_auth_for_other_requests(self):
+        with (
+            patch.dict(os.environ, {"LOCAL_SWAGGER_USER_ID": "not-a-uuid"}),
+            self.assertLogs("src.middleware.auth", level="WARNING"),
+        ):
+            response = await self.request()
+            self.assertEqual(response.status_code, 401)
+            response = await self.request(
+                peer="203.0.113.1",
+                headers={"Referer": "http://localhost:5003/docs"},
+            )
+            self.assertEqual(response.status_code, 401)
+
+        self.db.execute.assert_not_awaited()
+
+    async def test_malformed_user_id_does_not_break_valid_bearer_auth(self):
+        with (
+            patch.dict(os.environ, {"LOCAL_SWAGGER_USER_ID": "not-a-uuid"}),
+            self.assertLogs("src.middleware.auth", level="WARNING"),
+            patch("src.middleware.auth.PyJWKClient") as jwks_client,
+            patch(
+                "src.middleware.auth.decode",
+                return_value={"sub": str(self.user.uuid), "email": self.user.email},
+            ),
+        ):
+            response = await self.request(
+                headers={
+                    "Referer": "http://localhost:5003/docs",
+                    "Authorization": "Bearer valid-token",
+                }
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["sub"], str(self.user.uuid))
+        jwks_client.return_value.get_signing_key_from_jwt.assert_called_once_with(
+            "valid-token"
+        )
+
+    async def test_user_id_accepts_surrounding_whitespace(self):
+        with patch.dict(os.environ, {"LOCAL_SWAGGER_USER_ID": f" {self.user.uuid} "}):
+            response = await self.request(
+                headers={"Referer": "http://localhost:5003/docs"}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["sub"], str(self.user.uuid))
+
+    async def test_whitespace_only_user_id_disables_bypass(self):
+        with patch.dict(os.environ, {"LOCAL_SWAGGER_USER_ID": "   "}):
             response = await self.request(
                 headers={"Referer": "http://localhost:5003/docs"}
             )

@@ -1,3 +1,4 @@
+import logging
 import os
 from ipaddress import ip_address
 from urllib.parse import urlsplit
@@ -14,6 +15,9 @@ from jwt import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 class AuthMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
@@ -22,11 +26,20 @@ class AuthMiddleware(BaseHTTPMiddleware):
         self.AWS_REGION = os.getenv("AWS_REGION")
         self.COGNITO_ISSUER = os.getenv("COGNITO_ISSUER")
         self.CLIENT_ID = os.getenv("COGNITO_CLIENT_ID")
-        local_user_id = os.getenv("LOCAL_SWAGGER_USER_ID")
-        self.local_swagger_user_id = UUID(local_user_id) if local_user_id else None
+        local_user_id = (os.getenv("LOCAL_SWAGGER_USER_ID") or "").strip()
+        self.local_swagger_configured = bool(local_user_id)
+        self.local_swagger_user_id = None
+        if local_user_id:
+            try:
+                self.local_swagger_user_id = UUID(local_user_id)
+            except ValueError:
+                logger.warning(
+                    "Local Swagger authentication bypass is unavailable: "
+                    "LOCAL_SWAGGER_USER_ID must be a valid UUID from user_table.uuid"
+                )
 
     def _is_local_swagger_request(self, request: Request) -> bool:
-        if self.local_swagger_user_id is None or request.client is None:
+        if not self.local_swagger_configured or request.client is None:
             return False
 
         docs_url = request.app.docs_url
@@ -66,6 +79,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
         token = request.headers.get("Authorization")
 
         if not token and self._is_local_swagger_request(request):
+            if self.local_swagger_user_id is None:
+                return JSONResponse(
+                    status_code=503,
+                    content={
+                        "detail": (
+                            "LOCAL_SWAGGER_USER_ID must be a valid UUID from "
+                            "user_table.uuid. Update your local .env and restart the server."
+                        )
+                    },
+                )
             request.state.local_swagger_user_id = self.local_swagger_user_id
             return await call_next(request)
 

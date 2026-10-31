@@ -77,20 +77,63 @@ Async stack with PostgreSQL (`asyncpg`), SQLAlchemy 2.0, Alembic, and Uvicorn. O
 
 5. **Start the server:**
    ```sh
-   uvicorn main:app --reload --port 5003 --env-file .env
+   ./run.sh
    ```
-   - Visit [http://localhost:5003/docs](http://localhost:5003/docs) for the API docs.
+   - Visit [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) for the API docs.
+
+### Debug in VS Code
+
+1. Install the recommended **Python** and **Python Debugger** extensions. In the
+   Command Palette, run **Python: Select Interpreter** and select `venv`.
+2. Configure your local `.env` as described above and start PostgreSQL. Stop any
+   other API server using port `8000`.
+3. Set a breakpoint by clicking beside a line number in a router or service.
+4. Open **Run and Debug**, select **WealthWing API**, and press **F5**.
+5. Open [Swagger](http://127.0.0.1:8000/docs) and call the endpoint that reaches
+   your breakpoint. Use the local Swagger authentication setup below to call
+   protected endpoints without a Cognito token.
+
+The debugger loads `.env` from the repository root and runs one Uvicorn process
+without auto-reload. After editing code, use **Restart** in the debug toolbar.
+Inspect variables and use **F10** to step over or **F11** to step into code.
+
+To debug the test suite, install `requirements-dev.txt`, select **WealthWing
+Tests**, and press **F5**. Both launch configurations use your selected Python
+interpreter; the editor extension supplies the debugger.
+
+To start from the terminal and attach VS Code instead:
+
+```sh
+source venv/bin/activate
+python -m pip install -r requirements-dev.txt
+./run.sh --debug
+```
+
+The script starts the API immediately at `http://127.0.0.1:8000/docs`, with the
+debugger listening on `127.0.0.1:5678`. To use breakpoints, select **WealthWing
+API (Attach)** in **Run and Debug** and press **F5**. Use the **WealthWing API**
+launch configuration instead to catch startup breakpoints. After code edits,
+stop the script with **Ctrl+C**, run it again, and reattach.
+Running `./run.sh` without `--debug`
+starts the API normally with auto-reload. The script uses your activated virtual
+environment, or falls back to the repository's `venv` or `.venv`.
 
 ### Use local Swagger without a Cognito token
 
 Set `LOCAL_SWAGGER_USER_ID` in your local `.env` to an existing `user_table.uuid`,
-then restart the server:
+then restart the server. Replace the placeholder below with the actual UUID;
+do not include the angle brackets or use an email address:
 
 ```env
 LOCAL_SWAGGER_USER_ID=<existing-user-uuid>
 ```
 
-Open `http://localhost:5003/docs` and use **Try it out** without an Authorization
+If needed, find the UUID in your local database with
+`SELECT uuid, email FROM user_table;`. An invalid value returns a configuration
+error for local Swagger calls; docs, health checks, and Cognito authentication
+remain available.
+
+Open `http://127.0.0.1:8000/docs` and use **Try it out** without an Authorization
 header. Requests use that user's database role and organization. The bypass
 requires a direct loopback connection (`localhost`, `127.0.0.1`, or `[::1]`) and
 a same-origin Swagger `/docs` referrer. Use the non-Docker development server
