@@ -11,6 +11,7 @@ from src.util.transaction import (
     get_date_from_row,
     generate_fingerprint,
     clean_description,
+    DATE_FIELD_ALIASES,
 )
 from src.services.subscription_candidate_service import transaction_is_subscription_candidate
 from src.util.project import get_project_id_from_row
@@ -24,10 +25,17 @@ class ChaseDebitImporter(BaseBankImporter):
         account_id = import_job.account_id
         # Parse the CSV content
         csv_reader = csv.DictReader(io.StringIO(self.file_content))
-            # Validate required headers
-        required_headers = {"Posting Date", "Description", "Amount", "Type", "Balance"}
-        if not csv_reader.fieldnames or not required_headers.issubset(set(csv_reader.fieldnames)):
-            raise ValueError(f"Missing required columns. Expected: {required_headers}, Got: {set(csv_reader.fieldnames or [])}")
+        headers = set(csv_reader.fieldnames or [])
+        required_headers = {"Description", "Amount", "Type"}
+        missing_headers = required_headers - headers
+        has_date_header = bool(headers.intersection(DATE_FIELD_ALIASES))
+        if missing_headers or not has_date_header:
+            expected_date_headers = set(DATE_FIELD_ALIASES)
+            raise ValueError(
+                "Missing required columns. "
+                f"Expected: {required_headers} and one of {expected_date_headers}, "
+                f"Got: {headers}"
+            )
         
         transactions_and_fps = []
         fingerprints = []

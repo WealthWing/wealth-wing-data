@@ -196,68 +196,65 @@ async def _get_subscription_or_404(
 
 internal_transaction_types = {
     # Direct spending
-    "DEBIT_CARD": "expense",
-    "FEE_TRANSACTION": "expense",
+    "debit_card": "expense",
+    "fee_transaction": "expense",
+    "billpay": "expense",
+    "ach_debit": "expense",
 
     # Incoming money (default classifications)
-    "CHECK_DEPOSIT": "income",
+    "check_deposit": "income",
+    "ach_credit": "income",
 
     # Transfers between accounts
-    "ACCT_XFER": "transfer",
-    "TRANSFER": "transfer",
-    "CHASE_TO_PARTNERFI": "transfer",
+    "acct_xfer": "transfer",
+    "transfer": "transfer",
+    "chase_to_partnerfi": "transfer",
 
     # Ambiguous: require description or account context
-    "DEBIT": "unknown",
-    "CREDIT": "unknown",
-    "ACH_DEBIT": "unknown",
-    "ACH_CREDIT": "unknown",
-    "BILLPAY": "unknown",
-    "LOAN_PMT": "unknown",
-    "WITHDRAWAL": "unknown",
-    "DEPOSIT": "unknown",
+    "debit": "unknown",
+    "credit": "unknown",
+    "loan_pmt": "unknown",
+    "withdrawal": "unknown",
+    "deposit": "unknown",
 }
 
 description_transaction_types = {
-    "Online Transfer to": "transfer",
-    "Online Transfer from": "transfer",
-    "Payment to Chase card": "transfer",
-    "Payment to Credit Card": "transfer",
-    "Credit Card Payment": "transfer",
+    "online transfer to": "transfer",
+    "online transfer from": "transfer",
+    "payment to chase card": "transfer",
+    "payment to credit card": "transfer",
+    "credit card payment": "transfer",
+    "withdrawal": "transfer",
 }
 
 
-def get_internal_type(type, description):
-    """
-    Determines the internal transaction type based on the provided type and description.
+def get_internal_type(type_, description):
+    normalized_type = (type_ or "").strip().lower()
+    transaction_type = internal_transaction_types.get(
+        normalized_type, "unknown"
+    )
 
-    Args:
-        type (str): The transaction type to check against known internal types.
-        description (str): The transaction description, used for keyword matching if type is not found.
+    if transaction_type != "unknown":
+        return transaction_type
 
-    Returns:
-        str: The corresponding internal transaction type if found, otherwise "unknown".
-    """
-    transaction_type = "unknown"
-    
-    if type in internal_transaction_types:
-        transaction_type = internal_transaction_types[type]
-        
-    
-    if transaction_type == "unknown" and description in description_transaction_types:
-        return description_transaction_types[description]
-        
-    return transaction_type
+    normalized_description = (description or "").strip().lower()
+
+    for keyword, mapped_type in description_transaction_types.items():
+        if keyword in normalized_description:
+            return mapped_type
+
+    return "unknown"
 
 credit_card_internal_types = {
-    "Sale": "expense",
-    "Refund": "refund",
-    "Payment": "payment",
-    "Adjustment": "adjustment",
+    "sale": "expense",
+    "refund": "refund",
+    "payment": "payment",
+    "adjustment": "adjustment",
 }
 
 def get_credit_card_internal_type(type):
-    return credit_card_internal_types.get(type, "unknown")
+    normalized_type = (type or "").strip().lower()
+    return credit_card_internal_types.get(normalized_type, "unknown")
     
 
 def get_amount_cents(amount_str: str) -> int:
