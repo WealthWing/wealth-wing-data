@@ -88,6 +88,7 @@ class ChaseCreditImporter(BaseBankImporter):
         unique_transactions: list[Transaction] = [
             txn for txn, fp in transactions_and_fps if fp not in existing_fingerprints
         ]
+        
         seen_transactions: list[Transaction] = []
         for transaction in unique_transactions:
             if transaction.subscription_id:
