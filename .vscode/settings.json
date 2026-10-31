@@ -4,5 +4,8 @@
         "plaintext": false,
         "markdown": false,
         "scminput": false
-    }
+    },
+    "python.defaultInterpreterPath": "${workspaceFolder}/venv",
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    "python-envs.workspaceSearchPaths": ["./venv", "./.venv"]
 }

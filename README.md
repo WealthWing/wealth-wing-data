@@ -81,6 +81,34 @@ Async stack with PostgreSQL (`asyncpg`), SQLAlchemy 2.0, Alembic, and Uvicorn. O
    ```
    - Visit [http://localhost:5003/docs](http://localhost:5003/docs) for the API docs.
 
+### Use local Swagger without a Cognito token
+
+Set `LOCAL_SWAGGER_USER_ID` in your local `.env` to an existing `user_table.uuid`,
+then restart the server:
+
+```env
+LOCAL_SWAGGER_USER_ID=<existing-user-uuid>
+```
+
+Open `http://localhost:5003/docs` and use **Try it out** without an Authorization
+header. Requests use that user's database role and organization. The bypass
+requires a direct loopback connection (`localhost`, `127.0.0.1`, or `[::1]`) and
+a same-origin Swagger `/docs` referrer. Use the non-Docker development server
+above for this mode; Docker bridge and proxy connections may not be loopback.
+Other requests still require Cognito authentication, and supplied tokens are
+always validated. Leave `LOCAL_SWAGGER_USER_ID` empty outside local development.
+
+### Tests
+
+With `DB_URL` configured, install the test dependencies and run the suite:
+
+```sh
+pip install -r requirements-dev.txt
+python -m unittest discover -s tests -v
+```
+
+The tests mock database queries and do not require a running database.
+
 ---
 
 ## Database

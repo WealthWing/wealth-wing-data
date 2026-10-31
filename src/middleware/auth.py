@@ -1,4 +1,8 @@
 import os
+from ipaddress import ip_address
+from urllib.parse import urlsplit
+from uuid import UUID
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -18,6 +22,32 @@ class AuthMiddleware(BaseHTTPMiddleware):
         self.AWS_REGION = os.getenv("AWS_REGION")
         self.COGNITO_ISSUER = os.getenv("COGNITO_ISSUER")
         self.CLIENT_ID = os.getenv("COGNITO_CLIENT_ID")
+        local_user_id = os.getenv("LOCAL_SWAGGER_USER_ID")
+        self.local_swagger_user_id = UUID(local_user_id) if local_user_id else None
+
+    def _is_local_swagger_request(self, request: Request) -> bool:
+        if self.local_swagger_user_id is None or request.client is None:
+            return False
+
+        docs_url = request.app.docs_url
+        if not docs_url:
+            return False
+
+        try:
+            if not ip_address(request.client.host).is_loopback:
+                return False
+
+            url = urlsplit(str(request.url))
+            referer = urlsplit(request.headers.get("referer", ""))
+            docs_path = request.scope.get("root_path", "").rstrip("/") + docs_url
+            return (
+                url.hostname in {"localhost", "127.0.0.1", "::1"}
+                and referer.scheme == url.scheme
+                and referer.netloc == url.netloc
+                and referer.path in {docs_path, docs_path.rstrip("/") + "/"}
+            )
+        except ValueError:
+            return False
 
     async def dispatch(self, request: Request, call_next) -> Response:
         public_paths = [
@@ -34,6 +64,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         token = request.headers.get("Authorization")
+
+        if not token and self._is_local_swagger_request(request):
+            request.state.local_swagger_user_id = self.local_swagger_user_id
+            return await call_next(request)
 
         if not token:
             return JSONResponse(status_code=401, content={"detail": "Unauthorized"})

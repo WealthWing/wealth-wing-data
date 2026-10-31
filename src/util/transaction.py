@@ -195,24 +195,35 @@ async def _get_subscription_or_404(
 
 
 internal_transaction_types = {
-    "DEBIT": "expense",
-    "CREDIT": "income",
-    "CHECK_DEPOSIT": "income",
-    "ACH_DEBIT": "expense",
-    "ACH_CREDIT": "income",
-    "CHASE_TO_PARTNERFI": "expense",
-    "ACCT_XFER": "transfer",
+    # Direct spending
     "DEBIT_CARD": "expense",
-    "BILLPAY": "expense",
-    "LOAN_PMT": "expense",
+    "FEE_TRANSACTION": "expense",
+
+    # Incoming money (default classifications)
+    "CHECK_DEPOSIT": "income",
+
+    # Transfers between accounts
+    "ACCT_XFER": "transfer",
     "TRANSFER": "transfer",
-    "WITHDRAWAL": "expense",
-    "DEPOSIT": "income",
-    # Fallbacks for common patterns in description
-    "Payment to": "expense",
-    "Online Payment": "expense",
+    "CHASE_TO_PARTNERFI": "transfer",
+
+    # Ambiguous: require description or account context
+    "DEBIT": "unknown",
+    "CREDIT": "unknown",
+    "ACH_DEBIT": "unknown",
+    "ACH_CREDIT": "unknown",
+    "BILLPAY": "unknown",
+    "LOAN_PMT": "unknown",
+    "WITHDRAWAL": "unknown",
+    "DEPOSIT": "unknown",
+}
+
+description_transaction_types = {
     "Online Transfer to": "transfer",
-    # Credit card Types
+    "Online Transfer from": "transfer",
+    "Payment to Chase card": "transfer",
+    "Payment to Credit Card": "transfer",
+    "Credit Card Payment": "transfer",
 }
 
 
@@ -227,14 +238,16 @@ def get_internal_type(type, description):
     Returns:
         str: The corresponding internal transaction type if found, otherwise "unknown".
     """
+    transaction_type = "unknown"
+    
     if type in internal_transaction_types:
-        return internal_transaction_types[type]
-
-    for keyword, internal_type in internal_transaction_types.items():
-       if keyword.lower() in description.lower():
-           return internal_type
-
-    return "unknown"
+        transaction_type = internal_transaction_types[type]
+        
+    
+    if transaction_type == "unknown" and description in description_transaction_types:
+        return description_transaction_types[description]
+        
+    return transaction_type
 
 credit_card_internal_types = {
     "Sale": "expense",
